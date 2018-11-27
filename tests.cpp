@@ -1,5 +1,6 @@
 #include "enet.h"
 #include <iostream>
+#include <omp.h>
 
 
 void test_copy_data1(py::array_t<double> input){
@@ -7,6 +8,7 @@ void test_copy_data1(py::array_t<double> input){
     std::cout << "shape " << N << " " << D << std::endl;
     std::cout << "size " << input.size() << std::endl;
 
+    omp_set_num_threads(1);
     // copy data 
     std::vector<double> output = copy_input_data(input);
 
