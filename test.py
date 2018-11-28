@@ -23,24 +23,12 @@ def test_copy_data_omp_time():
     print()
     N,D = 100000, 1000
     b = np.ones(shape=(N,D), order='F')
-    print("testing copying for a fortran-format array (multithread should be slower here) ")
+    print("testing copying for a fortran-format array (multithread should be similar speed here) ")
     enet_tests.test_copy_data_omp_time(b, 1)
     enet_tests.test_copy_data_omp_time(b, 4)
-
 
     a = np.ones(shape=(N,D), order='C')
     print("testing copying for a c-format array (multithread should be faster here) ")
     enet_tests.test_copy_data_omp_time(a, 1)
     enet_tests.test_copy_data_omp_time(a, 4)
 
-
-# print(a)
-# print("array is {}".format("C-style" if a.flags['C_CONTIGUOUS'] else "Fortran-style"))
-# enet.standardize_input_data(a)
-# print("array is {}".format("C-style" if a.flags['C_CONTIGUOUS'] else "Fortran-style"))
-
-# print()
-# print(b)
-# print("array is {}".format("C-style" if b.flags['C_CONTIGUOUS'] else "Fortran-style"))
-# enet.standardize_input_data(b)
-# print("array is {}".format("C-style" if b.flags['C_CONTIGUOUS'] else "Fortran-style"))
