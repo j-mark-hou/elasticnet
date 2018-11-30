@@ -54,5 +54,16 @@ import enet_tests
 
 def test_estimate_squaredloss_naive1():
     # simple array: 
-
-    enet.estimate_squaredloss_naive()
+    N,D = 100, 5
+    input_x = np.random.uniform(size=(N,D))
+    means, stds = np.empty(shape=D), np.empty(shape=D)
+    params_init = np.zeros(shape=D)
+    params = np.empty(shape=D)
+    max_coord_descent_rounds = 20
+    tol = .1
+    print()
+    enet.estimate_squaredloss_naive(input_x, means, stds, params_init, params, max_coord_descent_rounds, tol)
+    print(means)
+    print(stds)
+    print(params_init)
+    print(params)

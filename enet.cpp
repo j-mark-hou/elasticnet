@@ -69,14 +69,20 @@ void compute_mean_std_and_standardize_x_data(std::vector<double>& x_data, py::ar
 // params_init = where to start estimation at
 // params = array for holding the final estimated params
 // max_coord_descent_rounds = how many rounds of coordinate descent (1 round = going through all coords once) to do at max
-void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double> means, py::array_t<double> stds,
+// lambda = the total regularization amount
+// alpha = the fraction of regularization that goes on the L1 term (so 1-alpha goets on l2)
+void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double> input_y,
+                                py::array_t<double> means, py::array_t<double> stds,
                                 py::array_t<double> params_init, py::array_t<double> params, size_t max_coord_descent_rounds,
-                                double tol){
-    // size of input_x data
-    size_t ND = input_x.size();
+                                double lambda, double alpha, double tol){
+    // dimensionality of data
+    size_t N = input_y.sie()
     size_t D = means.size();
-    size_t N = ND/D;
     // TODO: add dimension check here... maybe?
+
+    // compute the total l1 and l2 reg
+    double l1_reg = alpha*lambda;
+    double l2_reg = (1-alpha)*lambda;
 
     // initialize the final params at the value of the initial params
     auto params_init_unchecked = params_init.unchecked<1>();
@@ -87,21 +93,48 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
     // prepare x_data for estimation
     std::vector<double> x_data = copy_input_x_data(input_x);
     compute_mean_std_and_standardize_x_data(x_data, means, stds);
-    // ok, now start iterating.
-    double max_param_change; // how much some param changed each iteration.
-    // for(size_t round=0; round<max_coord_descent_rounds; round++){
-    //     max_param_change=0;
-    //     // do one round of coordinate descent
-    //     for(size_t j=0; j<D; j++){
-    //         // TODO: add the thing where we stop checking if a parameter becomes zero
-
-
-    //     }
-    //     // termination condition: params don't change enough
-    //     if(max_param_change < tol){
-    //         break;
-    //     }
-    // }
+    // get a handle for accessing the y data
+    y_unchecked = input_y.unchecked<1>();
+    // compute the initial residuals (r in equation (7))
+    // note that this number is never re-computed from first principles, rather
+    // it's updated each time a param changes by subtracting the old and adding the new
+    // TODO: do we need to worry about the value drifting further and further from truth?
+    std::vector<double> resids(N);
+    // initialize residuals at y
+    for(size_t i=0; i<N; i++){
+        resids[i] = y_unchecked[i];
+    }
+    // and then subtract the x_ij * params[j] repeatedly.
+    for(size_t j=0; j<D; j++){
+        // TODO: parallelize here
+        for(size_t i=0; i<N; i++){
+            resids[i] -= x_data[j*N+i] * params_unchecked[j]; //
+        } 
+    }
+    // ok, now start estimating.
+    double max_param_change; // the max chagne in the param value during a each round.
+    double unregularized_optimal_param; // the value on `expression` inside the S(expression, \lambda\alpha) in equation (5)
+    double tmp_param;
+    for(size_t round=0; round<max_coord_descent_rounds; round++){
+        max_param_change=0;
+        // do one round of coordinate descent, where we iterate through all params and update each in turn
+        for(size_t j=0; j<D; j++){
+            // TODO: add the thing where we stop checking if a parameter becomes zero
+            // compute the inside thing
+            unregularized_optimal_param = params[j];
+            for(size_t i=0; i<N; i++){
+                unregularized_optimal_param += x_data[j*N+i] * resids[i] / N; // 
+            }
+            // see if it's big enough to warrant updating the params
+            if(unregularized_optimal_param > l1_reg){
+                //TODO: complete this
+            }
+        }
+        // termination condition: params don't change enough
+        if(max_param_change < tol){
+            break;
+        }
+    }
     
 
 
