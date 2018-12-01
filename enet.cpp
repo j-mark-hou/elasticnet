@@ -73,10 +73,11 @@ void compute_mean_std_and_standardize_x_data(std::vector<double>& x_data, py::ar
 // alpha = the fraction of regularization that goes on the L1 term (so 1-alpha goets on l2)
 void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double> input_y,
                                 py::array_t<double> means, py::array_t<double> stds,
-                                py::array_t<double> params_init, py::array_t<double> params, size_t max_coord_descent_rounds,
-                                double lambda, double alpha, double tol){
+                                py::array_t<double> params_init, py::array_t<double> params, 
+                                double lambda, double alpha, 
+                                double tol, size_t max_coord_descent_rounds){
     // dimensionality of data
-    size_t N = input_y.sie()
+    size_t N = input_y.size();
     size_t D = means.size();
     // TODO: add dimension check here... maybe?
 
@@ -94,8 +95,8 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
     std::vector<double> x_data = copy_input_x_data(input_x);
     compute_mean_std_and_standardize_x_data(x_data, means, stds);
     // get a handle for accessing the y data
-    y_unchecked = input_y.unchecked<1>();
-    // compute the initial residuals (r in equation (7))
+    auto y_unchecked = input_y.unchecked<1>();
+    // compute the initial residuals (r in equation (7)), which is real-predicted
     // note that this number is never re-computed from first principles, rather
     // it's updated each time a param changes by subtracting the old and adding the new
     // TODO: do we need to worry about the value drifting further and further from truth?
@@ -112,26 +113,53 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
         } 
     }
     // ok, now start estimating.
-    double max_param_change; // the max chagne in the param value during a each round.
+    bool max_param_change_exceeds_tol; // boolean stopping criterion = stop iteration if params don't change much.
     double unregularized_optimal_param; // the value on `expression` inside the S(expression, \lambda\alpha) in equation (5)
-    double tmp_param;
+    double tmp_new_param; // to hold the new params before we update the params vector
+    double tmp_new_minus_old_param; // updated minus old params
     for(size_t round=0; round<max_coord_descent_rounds; round++){
-        max_param_change=0;
+        std::cout<<"round "<<round<<std::endl;
+        max_param_change_exceeds_tol = false;
         // do one round of coordinate descent, where we iterate through all params and update each in turn
         for(size_t j=0; j<D; j++){
             // TODO: add the thing where we stop checking if a parameter becomes zero
             // compute the inside thing
-            unregularized_optimal_param = params[j];
+            unregularized_optimal_param = params_unchecked[j];
             for(size_t i=0; i<N; i++){
-                unregularized_optimal_param += x_data[j*N+i] * resids[i] / N; // 
+                unregularized_optimal_param += x_data[j*N+i] * (resids[i] / N); // 
             }
-            // see if it's big enough to warrant updating the params
-            if(unregularized_optimal_param > l1_reg){
-                //TODO: complete this
+            // if big enough, update the parameter, see equation(6) and (5)
+            if(std::abs(unregularized_optimal_param) > l1_reg){
+                if(unregularized_optimal_param > 0){
+                    tmp_new_param = (unregularized_optimal_param - l1_reg) / (1 + l2_reg);
+                }else{
+                    tmp_new_param = (unregularized_optimal_param + l1_reg) / (1 + l2_reg);
+                }
+                //  update the resids because params changed
+                tmp_new_minus_old_param = tmp_new_param - params_unchecked[j];
+                // figure out if params changed enough
+                max_param_change_exceeds_tol = (max_param_change_exceeds_tol) || (std::abs(tmp_new_minus_old_param) > tol);
+                // finally, update the params
+                params_unchecked[j] = tmp_new_param;
+            // if the unregularized new param is not big enough, set to zero (final case in equation (6))
+            }else{
+                tmp_new_minus_old_param = -params_unchecked[j];
+                params_unchecked[j] = 0;
+            }
+            // now, update the residuals if we updated this param
+            if(tmp_new_minus_old_param != 0){
+                for(size_t i=0; i<N; i++){
+                    resids[i] -= x_data[j*N+i] * tmp_new_minus_old_param; // 
+                }
             }
         }
-        // termination condition: params don't change enough
-        if(max_param_change < tol){
+        // print params after each round
+        for(size_t j=0; j<D; j++){
+            std::cout<<params_unchecked[j]<<",";
+        }
+        std::cout<<std::endl;
+        // termination condition: none of the params changed enough
+        if(!max_param_change_exceeds_tol){
             break;
         }
     }

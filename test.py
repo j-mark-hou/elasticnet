@@ -54,15 +54,34 @@ import enet_tests
 
 def test_estimate_squaredloss_naive1():
     # simple array: 
-    N,D = 100, 5
-    input_x = np.random.uniform(size=(N,D))
+    N,D = 100, 6
+    # input_x = np.random.uniform(size=(N,D))
+    input_x = np.random.normal(size=(N,D))
+    # coefs are [0, -1, 2, 0, -4, 5, 0, -7, 8, ...]
+    input_y = np.zeros(N)
+    for j in range(D):
+        jmod3 = j%3
+        if jmod3==0:
+            coef = 0
+        elif jmod3==1:
+            coef = -j
+        else:
+            coef = j
+        input_y += (input_x[:,j]-input_x[:,j].mean())/input_x[:,j].std() * coef
     means, stds = np.empty(shape=D), np.empty(shape=D)
     params_init = np.zeros(shape=D)
     params = np.empty(shape=D)
-    max_coord_descent_rounds = 20
+    reg_lambda = 0
+    reg_alpha = .5
+    max_coord_descent_rounds = 100
     tol = .1
     print()
-    enet.estimate_squaredloss_naive(input_x, means, stds, params_init, params, max_coord_descent_rounds, tol)
+    print(input_y)
+    enet.estimate_squaredloss_naive(input_x, input_y, 
+                                    means, stds, 
+                                    params_init, params, 
+                                    reg_lambda, reg_alpha, 
+                                    tol, max_coord_descent_rounds)
     print(means)
     print(stds)
     print(params_init)
