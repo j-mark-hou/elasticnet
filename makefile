@@ -8,8 +8,8 @@ make_and_test: enet.cpython-36m-x86_64-linux-gnu.so enet_tests.cpython-36m-x86_6
 enet.cpython-36m-x86_64-linux-gnu.so: enet.cpp enet.h
 	$(CC) $(CFLAGS) -o enet.cpython-36m-x86_64-linux-gnu.so enet.cpp enet.h
 
-enet_tests.cpython-36m-x86_64-linux-gnu.so: enet.cpp enet.h tests.cpp
-	$(CC) $(CFLAGS) -o enet_tests.cpython-36m-x86_64-linux-gnu.so enet.cpp enet.h tests.cpp
+enet_tests.cpython-36m-x86_64-linux-gnu.so: enet.cpp enet.h enet_tests.cpp
+	$(CC) $(CFLAGS) -o enet_tests.cpython-36m-x86_64-linux-gnu.so enet.cpp enet.h enet_tests.cpp
 
 clean:
 	rm *.so

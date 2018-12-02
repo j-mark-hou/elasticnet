@@ -73,15 +73,17 @@ def test_estimate_squaredloss_naive1():
     params = np.empty(shape=D)
     reg_lambda = .01
     reg_alpha = .5
-    max_coord_descent_rounds = 20
+    max_coord_descent_rounds = 100
     tol = .001
+    num_threads = 1
     print()
     print(input_y)
     enet.estimate_squaredloss_naive(input_x, input_y, 
                                     means, stds, 
                                     params_init, params, 
                                     reg_lambda, reg_alpha, 
-                                    tol, max_coord_descent_rounds)
+                                    tol, max_coord_descent_rounds,
+                                    num_threads)
     print(means)
     print(stds)
     print("initial params: {}".format(params_init))

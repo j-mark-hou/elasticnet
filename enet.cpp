@@ -75,7 +75,8 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
                                 py::array_t<double> means, py::array_t<double> stds,
                                 py::array_t<double> params_init, py::array_t<double> params, 
                                 double lambda, double alpha, 
-                                double tol, size_t max_coord_descent_rounds){
+                                double tol, size_t max_coord_descent_rounds,
+                                int num_threads){
     // dimensionality of data
     size_t N = input_y.size();
     size_t D = means.size();
@@ -107,7 +108,7 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
     }
     // and then subtract the x_ij * params[j] repeatedly.
     for(size_t j=0; j<D; j++){
-        // TODO: parallelize here
+        #pragma omp parallel for schedule(static) // can't parallelize above as all i's get updated for each j
         for(size_t i=0; i<N; i++){
             resids[i] -= x_data[j*N+i] * params_unchecked[j]; //
         } 
@@ -130,6 +131,7 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
         max_param_change_exceeds_tol = false;
         // toggle all params to 'active' if we're starting a round where we update everything
         if(!current_round_is_for_only_active_params){
+            #pragma omp parallel for schedule(static)
             for(size_t j=0; j<D; j++){
                 inactive_params[j] = false;
             }
@@ -139,6 +141,7 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
             if(inactive_params[j]) continue;
             // compute the inside thing
             unregularized_optimal_param = params_unchecked[j];
+            #pragma omp parallel for schedule(static)
             for(size_t i=0; i<N; i++){
                 unregularized_optimal_param += x_data[j*N+i] * (resids[i] / N); // 
             }
@@ -164,6 +167,7 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
             }
             // now, update the residuals if we updated this param
             if(tmp_new_minus_old_param != 0){
+                #pragma omp parallel for schedule(static)
                 for(size_t i=0; i<N; i++){
                     resids[i] -= x_data[j*N+i] * tmp_new_minus_old_param; // 
                 }
@@ -177,12 +181,14 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
         //  if we're in an active set only round, then we should go back to an everything round
         //    if the tolerance change is satisfied.
         if(current_round_is_for_only_active_params){
-            if(!max_param_change_exceeds_tol)
+            if(!max_param_change_exceeds_tol){
                 current_round_is_for_only_active_params = false;
+            }
         } else {
             // if we're in an update-everything round and nothing was updated enough, then we're finished
-            if(!max_param_change_exceeds_tol)
+            if(!max_param_change_exceeds_tol){
                 break;
+            }
             // if we're not finished, then the next round we go back to doing only active set stuff
             current_round_is_for_only_active_params = true;
         }
