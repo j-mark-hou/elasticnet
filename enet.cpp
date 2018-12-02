@@ -177,7 +177,7 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
         //  if we're in an active set only round, then we should go back to an everything round
         //    if the tolerance change is satisfied.
         if(current_round_is_for_only_active_params){
-            if(max_param_change_exceeds_tol)
+            if(!max_param_change_exceeds_tol)
                 current_round_is_for_only_active_params = false;
         } else {
             // if we're in an update-everything round and nothing was updated enough, then we're finished

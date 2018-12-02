@@ -71,9 +71,9 @@ def test_estimate_squaredloss_naive1():
     means, stds = np.empty(shape=D), np.empty(shape=D)
     params_init = np.zeros(shape=D)
     params = np.empty(shape=D)
-    reg_lambda = 0
+    reg_lambda = .01
     reg_alpha = .5
-    max_coord_descent_rounds = 100
+    max_coord_descent_rounds = 20
     tol = .001
     print()
     print(input_y)
@@ -84,5 +84,5 @@ def test_estimate_squaredloss_naive1():
                                     tol, max_coord_descent_rounds)
     print(means)
     print(stds)
-    print(params_init)
-    print(["{:.2f}".format(x) for x in params])
+    print("initial params: {}".format(params_init))
+    print("final params: [{}]".format(",".join(["{:.2f}".format(x) for x in params])))
