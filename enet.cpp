@@ -141,7 +141,7 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
             if(inactive_params[j]) continue;
             // compute the inside thing
             unregularized_optimal_param = params_unchecked[j];
-            #pragma omp parallel for schedule(static)
+            #pragma omp parallel for schedule(static) reduction(+:unregularized_optimal_param)
             for(size_t i=0; i<N; i++){
                 unregularized_optimal_param += x_data[j*N+i] * (resids[i] / N); // 
             }
