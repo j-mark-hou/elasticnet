@@ -74,7 +74,7 @@ def test_estimate_squaredloss_naive1():
     reg_lambda = 0
     reg_alpha = .5
     max_coord_descent_rounds = 100
-    tol = .1
+    tol = .001
     print()
     print(input_y)
     enet.estimate_squaredloss_naive(input_x, input_y, 
@@ -85,4 +85,4 @@ def test_estimate_squaredloss_naive1():
     print(means)
     print(stds)
     print(params_init)
-    print(params)
+    print(["{:.2f}".format(x) for x in params])

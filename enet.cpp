@@ -94,9 +94,9 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
     // prepare x_data for estimation
     std::vector<double> x_data = copy_input_x_data(input_x);
     compute_mean_std_and_standardize_x_data(x_data, means, stds);
-    // get a handle for accessing the y data
+    // fast access to y-data
     auto y_unchecked = input_y.unchecked<1>();
-    // compute the initial residuals (r in equation (7)), which is real-predicted
+    // compute the initial residuals (r in equation (7)), which is (y - yhat)
     // note that this number is never re-computed from first principles, rather
     // it's updated each time a param changes by subtracting the old and adding the new
     // TODO: do we need to worry about the value drifting further and further from truth?
@@ -112,17 +112,31 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
             resids[i] -= x_data[j*N+i] * params_unchecked[j]; //
         } 
     }
-    // ok, now start estimating.
+    // estimate by active-set iteration (see section 2.6), which amounts to these two steps:
+    //  1. loop through all D params once
+    //  2. then repeately loop through just the active params until no change
+    //    - coords are removed from the active set as they become zero
+    //  3. repeat
+    //  4. terminate when a loop through all coefs fails
+    std::vector<bool> inactive_params(D); // see 2.6
+    bool current_round_is_for_only_active_params = false; // also see 2.6
     bool max_param_change_exceeds_tol; // boolean stopping criterion = stop iteration if params don't change much.
     double unregularized_optimal_param; // the value on `expression` inside the S(expression, \lambda\alpha) in equation (5)
     double tmp_new_param; // to hold the new params before we update the params vector
     double tmp_new_minus_old_param; // updated minus old params
     for(size_t round=0; round<max_coord_descent_rounds; round++){
-        std::cout<<"round "<<round<<std::endl;
+        std::cout<<"round "<<round
+                 << " current_round_is_for_only_active_params "<< current_round_is_for_only_active_params<<std::endl;
         max_param_change_exceeds_tol = false;
+        // toggle all params to 'active' if we're starting a round where we update everything
+        if(!current_round_is_for_only_active_params){
+            for(size_t j=0; j<D; j++){
+                inactive_params[j] = false;
+            }
+        }
         // do one round of coordinate descent, where we iterate through all params and update each in turn
         for(size_t j=0; j<D; j++){
-            // TODO: add the thing where we stop checking if a parameter becomes zero
+            if(inactive_params[j]) continue;
             // compute the inside thing
             unregularized_optimal_param = params_unchecked[j];
             for(size_t i=0; i<N; i++){
@@ -145,6 +159,8 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
             }else{
                 tmp_new_minus_old_param = -params_unchecked[j];
                 params_unchecked[j] = 0;
+                // also, add it to the set of inactive params so we know not to check it next round
+                inactive_params[j] = true;
             }
             // now, update the residuals if we updated this param
             if(tmp_new_minus_old_param != 0){
@@ -158,9 +174,17 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
             std::cout<<params_unchecked[j]<<",";
         }
         std::cout<<std::endl;
-        // termination condition: none of the params changed enough
-        if(!max_param_change_exceeds_tol){
-            break;
+        //  if we're in an active set only round, then we should go back to an everything round
+        //    if the tolerance change is satisfied.
+        if(current_round_is_for_only_active_params){
+            if(max_param_change_exceeds_tol)
+                current_round_is_for_only_active_params = false;
+        } else {
+            // if we're in an update-everything round and nothing was updated enough, then we're finished
+            if(!max_param_change_exceeds_tol)
+                break;
+            // if we're not finished, then the next round we go back to doing only active set stuff
+            current_round_is_for_only_active_params = true;
         }
     }
     
