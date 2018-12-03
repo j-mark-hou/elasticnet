@@ -1,6 +1,7 @@
 import numpy as np
 import enet
 import enet_tests
+import time
 
 # def test_copy_input_x_data():
 #     a = np.ascontiguousarray(np.array(range(12)).reshape((3,4)))
@@ -81,14 +82,53 @@ def test_estimate_squaredloss_naive1():
     print()
     print("l2 objective, lambda={}, alpha={}, tol={}, up to {} rounds, using {} threads"
             .format(reg_lambda, reg_alpha, tol, max_coord_descent_rounds, num_threads))
-    enet.estimate_squaredloss_naive(input_x, input_y, 
+    num_rounds = enet.estimate_squaredloss_naive(input_x, input_y, 
                                     means, stds, 
                                     params_init, params, 
                                     reg_lambda, reg_alpha, 
                                     tol, max_coord_descent_rounds,
                                     num_threads)
+    print("number of rounds (=passes through the coordinates): {}".format(num_rounds))
     print("computed means :  [{}]".format(", ".join(["{:.2f}".format(x) for x in means])))
     print("computed stds :   [{}]".format(", ".join(["{:.2f}".format(x) for x in stds])))
     print("initial params :  [{}]".format(", ".join(["{:.2f}".format(x) for x in params_init])))
     print("computed params : [{}]".format(", ".join(["{:.2f}".format(x) for x in params])))
     print("real params :     [{}]".format(", ".join(["{:.2f}".format(x) for x in true_params])))
+
+
+def test_estimate_squaredloss_time():
+    N,D = 1000000, 100
+    input_x = np.random.uniform(size=(N,D))
+    # coefs are uniformly 1
+    input_y = np.zeros(N)
+    true_params = []
+    for j in range(D):
+        coef = j
+        true_params.append(coef)
+        input_y += (input_x[:,j]-input_x[:,j].mean())/input_x[:,j].std() * coef
+    means, stds = np.empty(shape=D), np.empty(shape=D)
+    params_init = np.zeros(shape=D)
+    params = np.empty(shape=D)
+    reg_lambda = .01
+    reg_alpha = .5
+    max_coord_descent_rounds = 1000
+    tol = .001
+    num_threads = 1
+    print()
+    print("N={}, D={}".format(N,D))
+    print("real params :     [{}]".format(", ".join(["{:.2f}".format(x) for x in true_params])))
+    # multithread shoul be like 2/3 the time
+    for num_threads in [1, 4]:
+        print("ESTIMATING USING {} THREADS".format(num_threads))
+        print("l2 objective, lambda={}, alpha={}, tol={}, up to {} rounds, using {} threads"
+                .format(reg_lambda, reg_alpha, tol, max_coord_descent_rounds, num_threads))
+        t0 = time.time()
+        num_rounds = enet.estimate_squaredloss_naive(input_x, input_y, 
+                                                    means, stds, 
+                                                    params_init, params, 
+                                                    reg_lambda, reg_alpha, 
+                                                    tol, max_coord_descent_rounds,
+                                                    num_threads)
+        t1 = time.time()
+        print("computed params : [{}]".format(", ".join(["{:.2f}".format(x) for x in params])))
+        print("{} threads, completed {} rounds in {:.3f} seconds".format(num_threads, num_rounds, t1-t0))

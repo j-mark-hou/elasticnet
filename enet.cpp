@@ -73,7 +73,7 @@ void compute_mean_std_and_standardize_x_data(std::vector<double>& x_data, py::ar
 // max_coord_descent_rounds = how many rounds of coordinate descent (1 round = going through all coords once) to do at max
 // lambda = the total regularization amount
 // alpha = the fraction of regularization that goes on the L1 term (so 1-alpha goets on l2)
-void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double> input_y,
+int estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double> input_y,
                                 py::array_t<double> means, py::array_t<double> stds,
                                 py::array_t<double> params_init, py::array_t<double> params,
                                 double lambda, double alpha, 
@@ -128,9 +128,10 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
     double unregularized_optimal_param; // the value on `expression` inside the S(expression, \lambda\alpha) in equation (5)
     double tmp_new_param; // to hold the new params before we update the params vector
     double tmp_new_minus_old_param; // updated minus old params
-    for(size_t round=0; round<max_coord_descent_rounds; round++){
+    size_t curr_round; // we'll return the total number of rounds
+    for(curr_round=0; curr_round<max_coord_descent_rounds; curr_round++){
         #if DEBUG
-        std::cout<<"round "<<round
+        std::cout<<"curr_round "<<curr_round
                  << " current_round_is_for_only_active_params "<< current_round_is_for_only_active_params<<std::endl;
         #endif
         max_param_change_exceeds_tol = false;
@@ -200,9 +201,9 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
             current_round_is_for_only_active_params = true;
         }
     }
-    
 
-
+    // return the total number of rounds
+    return curr_round;
 }
 
 PYBIND11_MODULE(enet, m){
