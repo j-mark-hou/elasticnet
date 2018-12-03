@@ -3,6 +3,8 @@
 #include <cmath>
 #include "enet.h"
 
+#define DEBUG 0 // set to 1 to enable debug prints
+
 // TODO: in the case that the input_x x_data is already fortran format, it would be probably faster to
 //       just do `std::vector<double> output(input_x_ptr, input_x_ptr + N*D)`
 //       with `(double *)input_x_ptr = (double *)input_x.request().ptr`
@@ -67,13 +69,13 @@ void compute_mean_std_and_standardize_x_data(std::vector<double>& x_data, py::ar
 //   (as opposed to the 'covariance' update strategy) 
 // tol = when to terminate convergence if parameters don't change too much
 // params_init = where to start estimation at
-// params = array for holding the final estimated params
+// params = array for holding the final estimated params.  no intercept returned because it's aways just the avg y 
 // max_coord_descent_rounds = how many rounds of coordinate descent (1 round = going through all coords once) to do at max
 // lambda = the total regularization amount
 // alpha = the fraction of regularization that goes on the L1 term (so 1-alpha goets on l2)
 void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double> input_y,
                                 py::array_t<double> means, py::array_t<double> stds,
-                                py::array_t<double> params_init, py::array_t<double> params, 
+                                py::array_t<double> params_init, py::array_t<double> params,
                                 double lambda, double alpha, 
                                 double tol, size_t max_coord_descent_rounds,
                                 int num_threads){
@@ -126,8 +128,10 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
     double tmp_new_param; // to hold the new params before we update the params vector
     double tmp_new_minus_old_param; // updated minus old params
     for(size_t round=0; round<max_coord_descent_rounds; round++){
+        #if DEBUG
         std::cout<<"round "<<round
                  << " current_round_is_for_only_active_params "<< current_round_is_for_only_active_params<<std::endl;
+        #endif
         max_param_change_exceeds_tol = false;
         // toggle all params to 'active' if we're starting a round where we update everything
         if(!current_round_is_for_only_active_params){
@@ -173,11 +177,13 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
                 }
             }
         }
-        // print params after each round
+        
+        #if DEBUG // print params after each round
         for(size_t j=0; j<D; j++){
             std::cout<<params_unchecked[j]<<",";
         }
         std::cout<<std::endl;
+        #endif
         //  if we're in an active set only round, then we should go back to an everything round
         //    if the tolerance change is satisfied.
         if(current_round_is_for_only_active_params){
