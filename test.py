@@ -96,7 +96,7 @@ def test_estimate_squaredloss_naive1():
     print("real params :     [{}]".format(", ".join(["{:.2f}".format(x) for x in true_params])))
 
 
-def test_estimate_squaredloss_time():
+def test_estimate_squaredloss_naive_time():
     N,D = 1000000, 100
     input_x = np.random.uniform(size=(N,D))
     # coefs are uniformly 1
@@ -117,7 +117,8 @@ def test_estimate_squaredloss_time():
     print()
     print("N={}, D={}".format(N,D))
     print("real params :     [{}]".format(", ".join(["{:.2f}".format(x) for x in true_params])))
-    # multithread shoul be like 2/3 the time
+    # multithread shoul be like 2/3 the time.  this example doesn't go many rounds, so most
+    #  of the speedup is from faster copying ofdata rather than faster iteration.
     for num_threads in [1, 4]:
         print("ESTIMATING USING {} THREADS".format(num_threads))
         print("l2 objective, lambda={}, alpha={}, tol={}, up to {} rounds, using {} threads"
