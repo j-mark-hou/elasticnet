@@ -79,6 +79,7 @@ void estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double>
                                 double lambda, double alpha, 
                                 double tol, size_t max_coord_descent_rounds,
                                 int num_threads){
+    omp_set_num_threads(num_threads);
     // dimensionality of data
     size_t N = input_y.size();
     size_t D = means.size();

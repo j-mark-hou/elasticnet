@@ -77,7 +77,7 @@ def test_estimate_squaredloss_naive1():
     reg_alpha = .5
     max_coord_descent_rounds = 100
     tol = .001
-    num_threads = 4
+    num_threads = 1
     print()
     print("l2 objective, lambda={}, alpha={}, tol={}, up to {} rounds, using {} threads"
             .format(reg_lambda, reg_alpha, tol, max_coord_descent_rounds, num_threads))
