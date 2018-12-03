@@ -6,40 +6,37 @@
 #define DEBUG 0 // set to 1 to enable debug prints
 
 // TODO: in the case that the input_x x_data is already fortran format, it would be probably faster to
-//       just do `std::vector<double> output(input_x_ptr, input_x_ptr + N*D)`
-//       with `(double *)input_x_ptr = (double *)input_x.request().ptr`
-std::vector<double> copy_input_x_data(py::array_t<double> input_x){
+//       just to... copy it
+void copy_input_x_data(py::array_t<double> input_x, py::array_t<double> output_x, int num_threads){
+    omp_set_num_threads(num_threads);
     auto input_x_unchecked = input_x.unchecked<2>();
+    auto output_x_unchecked = output_x.mutable_unchecked<1>();
     size_t N = input_x_unchecked.shape(0), D = input_x_unchecked.shape(1);
-    // initialize a new vector for copying over input_x
-    std::vector<double> output(N*D);
     // go through the array, column by column, filling things up in fortran order
     // (column-major)
     #pragma omp parallel for schedule(static) collapse(2)
     for(size_t c=0; c<D; c++){
         for(size_t r=0; r<N; r++){
-            output[c*N+r] = input_x_unchecked(r,c);
+            output_x_unchecked(c*N+r) = input_x_unchecked(r,c);
         }
     }
-    return output; // c++11 vector has move semantics so this won't result in excess copy
 }
 
 
-// x_data is a vector, representing a 2-d array in Fortran format 
+// x_data is a 1-d numpy array, representing a 2-d array in Fortran format 
 //   as in, entries 1,...,N-1 correspond to column 0 of the array, etc.
 // means, stds are numpy arrays of size D, so that the size of x_data is N*D
 //   these two arrays exist to be populated with the means and stdevs of each column
 // this function computes the means and stdevs of each of the D columns,
 //   then takes the x_data, and then adjusts each column so that the mean and standard deviation
 //   of each column are 0 and 1, respectively
-void compute_mean_std_and_standardize_x_data(std::vector<double>& x_data, py::array_t<double> means, py::array_t<double> stds){
-    // some data checks
-    size_t D = means.size();
-    size_t N = x_data.size()/D;
-    if((D != stds.size()) || (N*D != x_data.size())){
-        throw std::runtime_error("`means` and `stds` must both have size equal number of columns in `x_data`");
-    }
+void compute_mean_std_and_standardize_x_data(py::array_t<double> x_data, 
+        py::array_t<double> means, py::array_t<double> stds, int num_threads){
+    omp_set_num_threads(num_threads);
+    size_t D = means.shape(0);
+    size_t N = x_data.shape(0)/D;
     // get raw access to the numpy arrays
+    auto x_unchecked = x_data.mutable_unchecked<1>();
     auto means_unchecked = means.mutable_unchecked<1>();
     auto stds_unchecked = stds.mutable_unchecked<1>();
     // compute the means and stds for each dimension
@@ -48,19 +45,19 @@ void compute_mean_std_and_standardize_x_data(std::vector<double>& x_data, py::ar
         double mean=0, meansq=0;
         int n = 1;
         for(size_t i=j*N; i<(j+1)*(N); i++){
-            mean += (x_data[i]-mean)/n;
-            meansq += (x_data[i]*x_data[i]-meansq)/n;
+            mean += (x_unchecked(i)-mean)/n;
+            meansq += (x_unchecked(i)*x_unchecked(i)-meansq)/n;
             n++;
         }
         // store them in the relevant arrays
-        means_unchecked[j] = mean;
-        stds_unchecked[j] = std::sqrt(meansq-mean*mean);
+        means_unchecked(j) = mean;
+        stds_unchecked(j) = std::sqrt(meansq-mean*mean);
     }
     // now normalize each column by subtracting the mean and dividing by the std
     #pragma omp parallel for schedule(static)
     for(size_t j=0; j<D; j++){
         for(size_t i=j*N; i<(j+1)*(N); i++){
-            x_data[i] = (x_data[i]-means_unchecked(j))/stds_unchecked(j);
+            x_unchecked(i) = (x_unchecked(i)-means_unchecked(j))/stds_unchecked(j);
         }
     }
 }
@@ -73,16 +70,15 @@ void compute_mean_std_and_standardize_x_data(std::vector<double>& x_data, py::ar
 // max_coord_descent_rounds = how many rounds of coordinate descent (1 round = going through all coords once) to do at max
 // lambda = the total regularization amount
 // alpha = the fraction of regularization that goes on the L1 term (so 1-alpha goets on l2)
-int estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double> input_y,
-                                py::array_t<double> means, py::array_t<double> stds,
-                                py::array_t<double> params_init, py::array_t<double> params,
-                                double lambda, double alpha, 
-                                double tol, size_t max_coord_descent_rounds,
-                                int num_threads){
+int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<double> input_y,
+                               py::array_t<double> params_init, py::array_t<double> params,
+                               double lambda, double alpha, 
+                               double tol, size_t max_coord_descent_rounds,
+                               int num_threads){
     omp_set_num_threads(num_threads);
     // dimensionality of data
     size_t N = input_y.size();
-    size_t D = means.size();
+    size_t D = params.size();
     // TODO: add dimension check here... maybe?
 
     // compute the total l1 and l2 reg
@@ -92,14 +88,16 @@ int estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double> 
     // initialize the final params at the value of the initial params
     auto params_init_unchecked = params_init.unchecked<1>();
     auto params_unchecked = params.mutable_unchecked<1>();
+    #pragma omp parallel for schedule(static)
     for(size_t j=0; j<D; j++){
         params_unchecked(j) = params_init_unchecked(j);
     }
-    // prepare x_data for estimation
-    std::vector<double> x_data = copy_input_x_data(input_x);
-    compute_mean_std_and_standardize_x_data(x_data, means, stds);
-    // fast access to y-data
+
+    // get access to input x-data, should be already standardized
+    auto x_unchecked = x_standardized.unchecked<1>();
+    // get access to y-data
     auto y_unchecked = input_y.unchecked<1>();
+
     // compute the initial residuals (r in equation (7)), which is (y - yhat)
     // note that this number is never re-computed from first principles, rather
     // it's updated each time a param changes by subtracting the old and adding the new
@@ -113,7 +111,7 @@ int estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double> 
     for(size_t j=0; j<D; j++){
         #pragma omp parallel for schedule(static) // can't parallelize above as all i's get updated for each j
         for(size_t i=0; i<N; i++){
-            resids[i] -= x_data[j*N+i] * params_unchecked[j]; //
+            resids[i] -= x_unchecked(j*N+i) * params_unchecked[j]; //
         } 
     }
     // estimate by active-set iteration (see section 2.6), which amounts to these two steps:
@@ -149,7 +147,7 @@ int estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double> 
             unregularized_optimal_param = params_unchecked[j];
             #pragma omp parallel for schedule(static) reduction(+:unregularized_optimal_param)
             for(size_t i=0; i<N; i++){
-                unregularized_optimal_param += x_data[j*N+i] * (resids[i] / N); // 
+                unregularized_optimal_param += x_unchecked(j*N+i) * (resids[i] / N); // 
             }
             // if big enough, update the parameter, see equation(6) and (5)
             if(std::abs(unregularized_optimal_param) > l1_reg){
@@ -175,7 +173,7 @@ int estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double> 
             if(tmp_new_minus_old_param != 0){
                 #pragma omp parallel for schedule(static)
                 for(size_t i=0; i<N; i++){
-                    resids[i] -= x_data[j*N+i] * tmp_new_minus_old_param; // 
+                    resids[i] -= x_unchecked(j*N+i) * tmp_new_minus_old_param; // 
                 }
             }
         }
@@ -208,6 +206,10 @@ int estimate_squaredloss_naive(py::array_t<double> input_x, py::array_t<double> 
 
 PYBIND11_MODULE(enet, m){
     m.doc() = "elastic net";
+    m.def("copy_input_x_data", &copy_input_x_data, 
+        "copy x data for downstream use");
+    m.def("compute_mean_std_and_standardize_x_data", &compute_mean_std_and_standardize_x_data, 
+        "compute mean and std of each input x column, and then standardize the input x data");
     m.def("estimate_squaredloss_naive", &estimate_squaredloss_naive, 
         "coordinate descent optimization for elasticnet with squared loss, using the 'naive' update strategy");
 }
