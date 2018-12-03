@@ -1,6 +1,6 @@
 import numpy as np
-import enet
-import enet_tests
+import enet_helpers
+import enet_helpers_tests
 import time
 
 def test_copy_input_x_data():
@@ -11,7 +11,7 @@ def test_copy_input_x_data():
         output_arr = np.empty(shape=(N*D))
         print("copying array from {} into F-format"
                 .format("C-format" if input_arr.flags['C_CONTIGUOUS'] else "F-format"))
-        enet.copy_input_x_data(input_arr, output_arr, 1)
+        enet_helpers.copy_input_x_data(input_arr, output_arr, 1)
         print(input_arr)
         print(output_arr)
     print("the copied 1-dim outputs should be identical even though inputs were different formats")
@@ -30,7 +30,7 @@ def test_copy_input_x_data_omp_time():
         for num_threads in (1,4):
             input_arr = np.ones(shape=(N,D), order=order)
             output_arr = np.empty(shape=(N*D))
-            enet_tests.test_copy_input_x_data_omp_time(input_arr, output_arr, num_threads)
+            enet_helpers_tests.test_copy_input_x_data_omp_time(input_arr, output_arr, num_threads)
     print("multithread faser for both C and F-format")
 
 def test_compute_mean_std_and_standardize_x_data():
@@ -38,7 +38,7 @@ def test_compute_mean_std_and_standardize_x_data():
     N,D = 100, 5 # small data
     x_data = np.random.uniform(size=N*D) # mean is .5, std is sqrt(1/12)~=.288
     means, stds = np.empty(shape=D), np.empty(shape=D)
-    enet.compute_mean_std_and_standardize_x_data(x_data, means, stds, 1)
+    enet_helpers.compute_mean_std_and_standardize_x_data(x_data, means, stds, 1)
     # print the output means and stds
     print("The computed means and stds should be around .5 and around .288 respectively")
     print("means", means)
@@ -50,7 +50,7 @@ def test_compute_mean_std_and_standardize_x_data_time():
     print("data shape is {}".format((N,D)))
     for num_threads in (1,4):
         data_input = np.random.uniform(size=N*D)
-        enet_tests.test_compute_mean_std_and_standardize_x_data_time(data_input, D, num_threads)
+        enet_helpers_tests.test_compute_mean_std_and_standardize_x_data_time(data_input, D, num_threads)
 
 def test_estimate_squaredloss_naive1():
     # x-data: 
@@ -58,11 +58,11 @@ def test_estimate_squaredloss_naive1():
     input_x = np.random.uniform(size=(N,D))
     x_standardized = np.empty(N*D)
     # copy it somewhere
-    enet.copy_input_x_data(input_x, x_standardized, 1)
+    enet_helpers.copy_input_x_data(input_x, x_standardized, 1)
     # standardize it
     means = np.empty(D)
     stds = np.empty(D)
-    enet.compute_mean_std_and_standardize_x_data(x_standardized, means, stds, 1)
+    enet_helpers.compute_mean_std_and_standardize_x_data(x_standardized, means, stds, 1)
     # comput y.  coefs are [0, -1, 2, 0, -4, 5, 0, -7, -8, ...]
     input_y = np.zeros(N)
     true_params = []
@@ -87,7 +87,7 @@ def test_estimate_squaredloss_naive1():
     print()
     print("l2 objective, lambda={}, alpha={}, tol={}, up to {} rounds, using {} threads"
             .format(reg_lambda, reg_alpha, tol, max_coord_descent_rounds, num_threads))
-    num_rounds = enet.estimate_squaredloss_naive(x_standardized, input_y, 
+    num_rounds = enet_helpers.estimate_squaredloss_naive(x_standardized, input_y, 
                                                  params_init, params, 
                                                  reg_lambda, reg_alpha, 
                                                  tol, max_coord_descent_rounds,
@@ -106,11 +106,11 @@ def test_estimate_squaredloss_naive_time():
     input_x = np.random.uniform(size=(N,D))
     x_standardized = np.empty(N*D)
     # copy it somewhere
-    enet.copy_input_x_data(input_x, x_standardized, 1)
+    enet_helpers.copy_input_x_data(input_x, x_standardized, 1)
     # standardize it
     means = np.empty(D)
     stds = np.empty(D)
-    enet.compute_mean_std_and_standardize_x_data(x_standardized, means, stds, 1)
+    enet_helpers.compute_mean_std_and_standardize_x_data(x_standardized, means, stds, 1)
     # comput y.  coefs are [0, -1, 2, 0, -4, 5, 0, -7, -8, ...]
     input_y = np.zeros(N)
     true_params = []
@@ -140,7 +140,7 @@ def test_estimate_squaredloss_naive_time():
         print("ESTIMATING USING {} THREADS".format(num_threads))
         print("l2 objective, lambda={}, alpha={}, tol={}, up to {} rounds, using {} threads"
                 .format(reg_lambda, reg_alpha, tol, max_coord_descent_rounds, num_threads))
-        enet_tests.test_estimate_squaredloss_naive_time(x_standardized, input_y, 
+        enet_helpers_tests.test_estimate_squaredloss_naive_time(x_standardized, input_y, 
                                                         params_init, params, 
                                                         reg_lambda, reg_alpha, 
                                                         tol, max_coord_descent_rounds,

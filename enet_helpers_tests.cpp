@@ -1,8 +1,7 @@
-#include "enet.h"
 #include <iostream>
 #include <cmath>
 #include <omp.h>
-
+#include "enet_helpers.h"
 
 void test_copy_input_x_data_omp_time(const py::array_t<double> input_x, py::array_t<double> output_x, int num_threads){
     size_t N = input_x.shape(0), D = input_x.shape(1);
@@ -49,7 +48,7 @@ void test_estimate_squaredloss_naive_time(py::array_t<double> x_standardized, py
 }
 
 
-PYBIND11_MODULE(enet_tests, m){
+PYBIND11_MODULE(enet_helpers_tests, m){
     m.doc() = "tests for elastic net";
     m.def("test_copy_input_x_data_omp_time", &test_copy_input_x_data_omp_time, "function for timing parallel data copy");
     m.def("test_compute_mean_std_and_standardize_x_data_time", &test_compute_mean_std_and_standardize_x_data_time, 

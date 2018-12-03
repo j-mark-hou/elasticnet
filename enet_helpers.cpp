@@ -1,7 +1,7 @@
 #include <iostream>
 #include <omp.h>
 #include <cmath>
-#include "enet.h"
+#include "enet_helpers.h"
 
 #define DEBUG 0 // set to 1 to enable debug prints
 
@@ -204,7 +204,7 @@ int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<d
     return curr_round;
 }
 
-PYBIND11_MODULE(enet, m){
+PYBIND11_MODULE(enet_helpers, m){
     m.doc() = "elastic net";
     m.def("copy_input_x_data", &copy_input_x_data, 
         "copy x data for downstream use");
