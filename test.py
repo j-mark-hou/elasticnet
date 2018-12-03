@@ -145,12 +145,4 @@ def test_estimate_squaredloss_naive_time():
                                                         reg_lambda, reg_alpha, 
                                                         tol, max_coord_descent_rounds,
                                                         num_threads)
-        # t0 = time.time()
-        # num_rounds = enet_tests.estimate_squaredloss_naive(x_standardized, input_y, 
-        #                                              params_init, params, 
-        #                                              reg_lambda, reg_alpha, 
-        #                                              tol, max_coord_descent_rounds,
-        #                                              num_threads)
-        # t1 = time.time()
         print("computed params : [{}]".format(", ".join(["{:.2f}".format(x) for x in params])))
-        # print("{} threads, completed {} rounds in {:.3f} seconds".format(num_threads, num_rounds, t1-t0))
