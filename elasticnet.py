@@ -75,8 +75,8 @@ def _input_checks(x, y, lambda_path, objective, *args, **kwargs):
 
 class ElasticNetPathModels():
     """
-    a class representing a sequence of elastic net models, corresponding to a bunch of models
-    from a regularization path.
+    a class representing a sequence of elastic net models, each one corresponding to some
+    global regularization value from a regularization path.
     """
 
     def __init__(self, params, intercept_coef_list):
@@ -112,7 +112,6 @@ class ElasticNetPathModels():
             if not c.startswith('coef_'):
                 continue
             plt.plot(df.index, df[c], marker='o', markersize=5, linestyle='--')
-            # plt.scatter(df.index, df[c], s=20)
         plt.xscale("log")
         plt.gca().invert_xaxis()
         plt.xlabel("global regularization strength")
