@@ -158,8 +158,6 @@ int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<d
                 }
                 //  update the resids because params changed
                 tmp_new_minus_old_param = tmp_new_param - params_unchecked[j];
-                // figure out if params changed enough
-                max_param_change_exceeds_tol = (max_param_change_exceeds_tol) || (std::abs(tmp_new_minus_old_param) > tol);
                 // finally, update the params
                 params_unchecked[j] = tmp_new_param;
             // if the unregularized new param is not big enough, set to zero (final case in equation (6))
@@ -169,6 +167,8 @@ int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<d
                 // also, add it to the set of inactive params so we know not to check it next round
                 inactive_params[j] = true;
             }
+            // figure out if params changed enough
+            max_param_change_exceeds_tol = (max_param_change_exceeds_tol) || (std::abs(tmp_new_minus_old_param) > tol);
             // now, update the residuals if we updated this param
             if(tmp_new_minus_old_param != 0){
                 #pragma omp parallel for schedule(static)
