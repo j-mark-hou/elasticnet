@@ -136,29 +136,34 @@ int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<d
     //    - coords are removed from the active set as they become zero
     //  3. repeat
     //  4. terminate when a loop through all coefs fails
-    std::vector<bool> inactive_params(D); // see 2.6
-    bool current_round_is_for_only_active_params = false; // also see 2.6
+    // some state variables to keep track of stuff
+    std::vector<bool> coef_is_inactive(D);
+    bool curr_round_ignore_inactive = false; // also see 2.6
     bool max_param_change_exceeds_tol; // boolean stopping criterion = stop iteration if params don't change much.
     double unregularized_optimal_param; // the value on `expression` inside the S(expression, \lambda\alpha) in equation (5)
     double tmp_new_param; // to hold the new params before we update the params vector
     double tmp_new_minus_old_param; // updated minus old params
-    size_t curr_round; // we'll return the total number of rounds
+    size_t curr_round; // we'll also want to keep track of / return the total number of rounds
     for(curr_round=0; curr_round<max_coord_descent_rounds; curr_round++){
         #if DEBUG
-        std::cout<<"curr_round "<<curr_round
-                 << " current_round_is_for_only_active_params "<< current_round_is_for_only_active_params<<std::endl;
+        std::cout<<"curr_round " << curr_round
+                 << " curr_round_ignore_inactive " 
+                 << curr_round_ignore_inactive
+                 << std::endl;
         #endif
         max_param_change_exceeds_tol = false;
         // toggle all params to 'active' if we're starting a round where we update everything
-        if(!current_round_is_for_only_active_params){
+        if(!curr_round_ignore_inactive){
             #pragma omp parallel for schedule(static)
             for(size_t j=0; j<D; j++){
-                inactive_params[j] = false;
+                coef_is_inactive[j] = false;
             }
         }
         // do one round of coordinate descent, where we iterate through all params and update each in turn
         for(size_t j=0; j<D; j++){
-            if(inactive_params[j]) continue;
+            if(coef_is_inactive[j]){
+                continue;
+            }
             // compute the unregularized_optimal_param
             unregularized_optimal_param = params_unchecked[j];
             #pragma omp parallel for schedule(static) reduction(+:unregularized_optimal_param)
@@ -172,7 +177,7 @@ int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<d
             tmp_new_minus_old_param = tmp_new_param - params_unchecked[j];
             params_unchecked[j] = tmp_new_param;
             if(params_unchecked[j] == 0){
-                inactive_params[j] = true;
+                coef_is_inactive[j] = true;
             }
             max_param_change_exceeds_tol = (max_param_change_exceeds_tol) 
                                             || (std::abs(tmp_new_minus_old_param) > tol);
@@ -194,9 +199,9 @@ int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<d
         #endif
         //  if we're in an active set only round, and params didn't change much,
         //    then we've exhausted updates to this active set and should go back to updating everything
-        if(current_round_is_for_only_active_params){
+        if(curr_round_ignore_inactive){
             if(!max_param_change_exceeds_tol){
-                current_round_is_for_only_active_params = false;
+                curr_round_ignore_inactive = false;
             }
         } else {
             // if we're in an update-everything round and nothing was updated enough, then we're finished
@@ -205,7 +210,7 @@ int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<d
             }
             // if params changed a bit, then we continue with the cordinate descent, so that the
             //   to doing only active set stuff
-            current_round_is_for_only_active_params = true;
+            curr_round_ignore_inactive = true;
         }
     }
 
