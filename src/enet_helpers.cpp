@@ -62,6 +62,22 @@ void compute_mean_std_and_standardize_x_data(py::array_t<double> x_data,
     }
 }
 
+// after we compute the optimal no-regularization parameter, apply regularization
+//  and return the regularized parameter
+double apply_l1_l2_reg_to_param(double unregularized_optimal_param,
+                                double l1_reg, double l2_reg){
+    // if big enough, update the parameter, see equation(6) and (5)
+    if(std::abs(unregularized_optimal_param) > l1_reg){
+        if(unregularized_optimal_param > 0){
+            return (unregularized_optimal_param - l1_reg) / (1 + l2_reg);
+        }else{
+            return (unregularized_optimal_param + l1_reg) / (1 + l2_reg);
+        }
+    } else { // if not, then param gets set to 0
+        return 0;
+    }
+}
+
 // coordinate descent optimization for elasticnet with squared loss, using the 'naive' update strategy
 //   (as opposed to the 'covariance' update strategy) 
 // tol = when to terminate convergence if parameters don't change too much
@@ -143,33 +159,25 @@ int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<d
         // do one round of coordinate descent, where we iterate through all params and update each in turn
         for(size_t j=0; j<D; j++){
             if(inactive_params[j]) continue;
-            // compute the inside thing
+            // compute the unregularized_optimal_param
             unregularized_optimal_param = params_unchecked[j];
             #pragma omp parallel for schedule(static) reduction(+:unregularized_optimal_param)
             for(size_t i=0; i<N; i++){
                 unregularized_optimal_param += x_unchecked(j*N+i) * (resids[i] / N); // 
             }
-            // if big enough, update the parameter, see equation(6) and (5)
-            if(std::abs(unregularized_optimal_param) > l1_reg){
-                if(unregularized_optimal_param > 0){
-                    tmp_new_param = (unregularized_optimal_param - l1_reg) / (1 + l2_reg);
-                }else{
-                    tmp_new_param = (unregularized_optimal_param + l1_reg) / (1 + l2_reg);
-                }
-                //  update the resids because params changed
-                tmp_new_minus_old_param = tmp_new_param - params_unchecked[j];
-                // finally, update the params
-                params_unchecked[j] = tmp_new_param;
-            // if the unregularized new param is not big enough, set to zero (final case in equation (6))
-            }else{
-                tmp_new_minus_old_param = -params_unchecked[j];
-                params_unchecked[j] = 0;
-                // also, add it to the set of inactive params so we know not to check it next round
+
+            // apply regularization adjustment to this unregularized_optimal_param 
+            //  and then update some iteration state variables
+            tmp_new_param = apply_l1_l2_reg_to_param(unregularized_optimal_param, l1_reg, l2_reg);
+            tmp_new_minus_old_param = tmp_new_param - params_unchecked[j];
+            params_unchecked[j] = tmp_new_param;
+            if(params_unchecked[j] == 0){
                 inactive_params[j] = true;
             }
-            // figure out if params changed enough
-            max_param_change_exceeds_tol = (max_param_change_exceeds_tol) || (std::abs(tmp_new_minus_old_param) > tol);
-            // now, update the residuals if we updated this param
+            max_param_change_exceeds_tol = (max_param_change_exceeds_tol) 
+                                            || (std::abs(tmp_new_minus_old_param) > tol);
+
+            // update the residuals if we updated this param
             if(tmp_new_minus_old_param != 0){
                 #pragma omp parallel for schedule(static)
                 for(size_t i=0; i<N; i++){
@@ -184,8 +192,8 @@ int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<d
         }
         std::cout<<std::endl;
         #endif
-        //  if we're in an active set only round, then we should go back to an everything round
-        //    if the tolerance change is satisfied.
+        //  if we're in an active set only round, and params didn't change much,
+        //    then we've exhausted updates to this active set and should go back to updating everything
         if(current_round_is_for_only_active_params){
             if(!max_param_change_exceeds_tol){
                 current_round_is_for_only_active_params = false;
@@ -195,7 +203,8 @@ int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<d
             if(!max_param_change_exceeds_tol){
                 break;
             }
-            // if we're not finished, then the next round we go back to doing only active set stuff
+            // if params changed a bit, then we continue with the cordinate descent, so that the
+            //   to doing only active set stuff
             current_round_is_for_only_active_params = true;
         }
     }
