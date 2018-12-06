@@ -7,7 +7,7 @@ _allowed_objectives = ['l2']
 # so that elasticnet.Data is literally just the c++ Data class produced by pybind
 Data = enet_helpers.Data
 
-def train(x, y, params=None):
+def train(data, params=None):
     input_params = params
     params = {
                 'lambda_path': None,
@@ -22,9 +22,8 @@ def train(x, y, params=None):
             params[k] = v
         else:
             raise ValueError("param not recognized: {}".format(k))
-        
 
-    _input_checks(x, y, **params)
+    _input_checks(**params)
 
     # the lambda path = the sequence of global regulaization parameters
     if params['lambda_path'] is not None:
@@ -34,14 +33,9 @@ def train(x, y, params=None):
         # TODO: implement automatic lambda path generation
 
     # copy and prepare data for estimation:
-    N, D = x.shape
-    x_standardized = np.empty(N*D)
-    enet_helpers.copy_input_x_data(x, x_standardized, params['num_threads'])
-    x_means, x_stds = np.empty(D), np.empty(D)
-    enet_helpers.compute_mean_std_and_standardize_x_data(x_standardized, x_means, x_stds, params['num_threads'])
-
+    N, D = data.N, data.D
     # intercept is just mean y due to standardization of x
-    intercept = y.mean()
+    intercept = data.get_y().mean()
 
     # estimate parameters of the whole regularization path
     intercept_coef_list = []
@@ -51,7 +45,7 @@ def train(x, y, params=None):
             print("estimating coefficients for lambda = {:.3e}".format(reg_lambda))
             coefs_init = coefs_tmp # set the most recent computed coefs as the initialization
             coefs_tmp = np.empty(D) # holder for new coefs
-            enet_helpers.estimate_squaredloss_naive(x_standardized, y, 
+            enet_helpers.estimate_squaredloss_naive(data,
                                                     coefs_init, coefs_tmp, 
                                                     reg_lambda, params['reg_alpha'], 
                                                     params['tol'], params['max_coord_descent_rounds'],
@@ -63,11 +57,9 @@ def train(x, y, params=None):
     return out_models
 
 
-def _input_checks(x, y, lambda_path, objective, *args, **kwargs):
+def _input_checks(lambda_path, objective, *args, **kwargs):
     """
     """
-    if x.shape[0] != y.shape[0] and len(y.shape)==1:
-        raise ValueError("x should have as many rows as y has entries")
     if lambda_path is None:
         raise NotImplementedError("automatic regularization path generation not yet implemented,"
                                     + " please manually set lambda_path to a list of positive values")
