@@ -1,49 +1,11 @@
+#include "coordinate_descent.h"
+#include "data.h"
+#include "common.h"
+
 #include <iostream>
 #include <omp.h>
 #include <cmath>
-#include "enet_helpers.h"
 
-#define DEBUG 0 // set to 1 to enable debug prints
-
-
-// x_data is a 1-d numpy array, representing a 2-d array in Fortran format 
-//   as in, entries 1,...,N-1 correspond to column 0 of the array, etc.
-// means, stds are numpy arrays of size D, so that the size of x_data is N*D
-//   these two arrays exist to be populated with the means and stdevs of each column
-// this function computes the means and stdevs of each of the D columns,
-//   then takes the x_data, and then adjusts each column so that the mean and standard deviation
-//   of each column are 0 and 1, respectively
-void compute_mean_std_and_standardize_x_data(py::array_t<double> x_data, 
-        py::array_t<double> means, py::array_t<double> stds, int num_threads){
-    omp_set_num_threads(num_threads);
-    size_t D = means.shape(0);
-    size_t N = x_data.shape(0)/D;
-    // get raw access to the numpy arrays
-    auto x_unchecked = x_data.mutable_unchecked<1>();
-    auto means_unchecked = means.mutable_unchecked<1>();
-    auto stds_unchecked = stds.mutable_unchecked<1>();
-    // compute the means and stds for each dimension
-    #pragma omp parallel for schedule(static)
-    for(size_t j=0; j<D; j++){
-        double mean=0, meansq=0;
-        int n = 1;
-        for(size_t i=j*N; i<(j+1)*(N); i++){
-            mean += (x_unchecked(i)-mean)/n;
-            meansq += (x_unchecked(i)*x_unchecked(i)-meansq)/n;
-            n++;
-        }
-        // store them in the relevant arrays
-        means_unchecked(j) = mean;
-        stds_unchecked(j) = std::sqrt(meansq-mean*mean);
-    }
-    // now normalize each column by subtracting the mean and dividing by the std
-    #pragma omp parallel for schedule(static)
-    for(size_t j=0; j<D; j++){
-        for(size_t i=j*N; i<(j+1)*(N); i++){
-            x_unchecked(i) = (x_unchecked(i)-means_unchecked(j))/stds_unchecked(j);
-        }
-    }
-}
 
 // after we compute the optimal no-regularization parameter, apply regularization
 //  and return the regularized parameter
@@ -64,21 +26,18 @@ double apply_l1_l2_reg_to_param(double unregularized_optimal_param,
 // coordinate descent optimization for elasticnet with squared loss, using the 'naive' update strategy
 //   (as opposed to the 'covariance' update strategy) 
 // tol = when to terminate convergence if parameters don't change too much
-// params_init = where to start estimation at
-// params = array for holding the final estimated params.  no intercept returned because it's aways just the avg y 
+// coefs_init = where to start estimation at
+// coefs = array for holding the final estimated coefs.  no intercept returned because it's aways just the avg y 
 // max_coord_descent_rounds = how many rounds of coordinate descent (1 round = going through all coords once) to do at max
 // lambda = the total regularization amount
 // alpha = the fraction of regularization that goes on the L1 term (so 1-alpha goets on l2)
-int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<double> input_y,
+int estimate_squaredloss_naive(Data& data,
                                py::array_t<double> params_init, py::array_t<double> params,
                                double lambda, double alpha, 
                                double tol, size_t max_coord_descent_rounds,
                                int num_threads){
     omp_set_num_threads(num_threads);
-    // dimensionality of data
-    size_t N = input_y.size();
-    size_t D = params.size();
-    // TODO: add dimension check here... maybe?
+    size_t N = data.N, D = data.D;
 
     // compute the total l1 and l2 reg
     double l1_reg = alpha*lambda;
@@ -92,11 +51,6 @@ int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<d
         params_unchecked(j) = params_init_unchecked(j);
     }
 
-    // get access to input x-data, should be already standardized
-    auto x_unchecked = x_standardized.unchecked<1>();
-    // get access to y-data
-    auto y_unchecked = input_y.unchecked<1>();
-
     // compute the initial residuals (r in equation (7)), which is (y - yhat)
     // note that this number is never re-computed from first principles, rather
     // it's updated each time a param changes by subtracting the old and adding the new
@@ -104,13 +58,13 @@ int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<d
     std::vector<double> resids(N);
     // initialize residuals at y
     for(size_t i=0; i<N; i++){
-        resids[i] = y_unchecked[i];
+        resids[i] = data.y[i];
     }
     // and then subtract the x_ij * params[j] repeatedly.
     for(size_t j=0; j<D; j++){
         #pragma omp parallel for schedule(static) // can't parallelize above as all i's get updated for each j
         for(size_t i=0; i<N; i++){
-            resids[i] -= x_unchecked(j*N+i) * params_unchecked[j]; //
+            resids[i] -= data.x[j*N+i] * params_unchecked[j]; //
         } 
     }
     // estimate by active-set iteration (see section 2.6), which amounts to these two steps:
@@ -151,7 +105,7 @@ int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<d
             unregularized_optimal_param = params_unchecked[j];
             #pragma omp parallel for schedule(static) reduction(+:unregularized_optimal_param)
             for(size_t i=0; i<N; i++){
-                unregularized_optimal_param += x_unchecked(j*N+i) * (resids[i] / N); // 
+                unregularized_optimal_param += data.x[j*N+i] * (resids[i] / N); // 
             }
 
             // apply regularization adjustment to this unregularized_optimal_param 
@@ -169,7 +123,7 @@ int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<d
             if(tmp_new_minus_old_param != 0){
                 #pragma omp parallel for schedule(static)
                 for(size_t i=0; i<N; i++){
-                    resids[i] -= x_unchecked(j*N+i) * tmp_new_minus_old_param; // 
+                    resids[i] -= data.x[j*N+i] * tmp_new_minus_old_param; // 
                 }
             }
         }
@@ -199,14 +153,4 @@ int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<d
 
     // return the total number of rounds
     return curr_round;
-}
-
-PYBIND11_MODULE(enet_helpers, m){
-    m.doc() = "elastic net";
-    m.def("copy_input_x_data", &copy_input_x_data, 
-        "copy x data for downstream use");
-    m.def("compute_mean_std_and_standardize_x_data", &compute_mean_std_and_standardize_x_data, 
-        "compute mean and std of each input x column, and then standardize the input x data");
-    m.def("estimate_squaredloss_naive", &estimate_squaredloss_naive, 
-        "coordinate descent optimization for elasticnet with squared loss, using the 'naive' update strategy");
 }

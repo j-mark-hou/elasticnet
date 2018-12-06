@@ -1,5 +1,5 @@
 #include "data.h"
-// #include "coordinate_descent.h"
+#include "coordinate_descent.h"
 
 #include <iostream>
 #include <omp.h>
@@ -27,13 +27,8 @@ PYBIND11_MODULE(enet_helpers, m){
         })
         .def("get_stds", [](const Data &d) {
             return py::array_t<double>(d.stds.size(), d.stds.data());
-        })
-        ;
+        });
 
-    // m.def("copy_input_x_data", &copy_input_x_data, 
-    //     "copy x data for downstream use");
-    // m.def("compute_mean_std_and_standardize_x_data", &compute_mean_std_and_standardize_x_data, 
-    //     "compute mean and std of each input x column, and then standardize the input x data");
-    // m.def("estimate_squaredloss_naive", &estimate_squaredloss_naive, 
-    //     "coordinate descent optimization for elasticnet with squared loss, using the 'naive' update strategy");
+    m.def("estimate_squaredloss_naive", &estimate_squaredloss_naive, 
+        "coordinate descent optimization for elasticnet with squared loss, using the 'naive' update strategy");
 }

@@ -2,6 +2,7 @@
 #define COORDINATE_DESCENT_H_
 
 #include "common.h"
+#include "data.h"
 #include <vector>
 
 
@@ -20,7 +21,7 @@
 //         py::array_t<double> means, py::array_t<double> stds, int num_threads);
 
 // TODO: DOCUMENT THIS
-int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<double> input_y,
+int estimate_squaredloss_naive(Data& data,
                                py::array_t<double> params_init, py::array_t<double> params,
                                double lambda, double alpha, 
                                double tol, size_t max_coord_descent_rounds,
