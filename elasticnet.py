@@ -4,6 +4,9 @@ from matplotlib import pyplot as plt
 
 _allowed_objectives = ['l2']
 
+# so that elasticnet.Data is literally just the c++ Data class produced by pybind
+Data = enet_helpers.Data
+
 def train(x, y, params=None):
     input_params = params
     params = {
