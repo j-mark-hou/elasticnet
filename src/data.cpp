@@ -18,7 +18,7 @@ Data::Data(py::array_t<double> x, py::array_t<double> y, int num_threads){
         }
     }
     // standardize the data
-    compute_mean_std_and_standardize_x_data(num_threads);
+    compute_mean_std_and_standardize_x_data();
     // copy the y
     auto y_unchecked = y.unchecked<1>();
     this->y = std::vector<double>(N);
@@ -30,8 +30,7 @@ Data::Data(py::array_t<double> x, py::array_t<double> y, int num_threads){
     }
 };
 
-void Data::compute_mean_std_and_standardize_x_data(int num_threads){
-    omp_set_num_threads(num_threads);
+void Data::compute_mean_std_and_standardize_x_data(){
     // initialize this->means and this->stds
     means = std::vector<double>(D);
     stds = std::vector<double>(D);
