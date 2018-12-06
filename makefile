@@ -13,8 +13,8 @@ CFLAGS = -O3 -Wall -shared -std=c++11 -fPIC -fopenmp `python3 -m pybind11 --incl
 make_and_test: $(MAIN_SO) # $(TEST_SO)
 	pytest -s test_data.py
 
-$(MAIN_SO): $(SRC_PATH)enet_helpers.cpp $(INC_PATH)data.h
-	$(CC) $(CFLAGS) -o $(MAIN_SO) $(SRC_PATH)enet_helpers.cpp $(INC_PATH)data.h
+$(MAIN_SO): $(SRC_PATH)enet_helpers.cpp $(INC_PATH)data.h $(SRC_PATH)data.cpp
+	$(CC) $(CFLAGS) -o $(MAIN_SO) $(SRC_PATH)enet_helpers.cpp $(INC_PATH)data.h $(SRC_PATH)data.cpp
 
 # $(TEST_SO): $(SRC_PATH)enet_helpers.cpp $(INC_PATH)enet_helpers.h $(TEST_PATH)enet_helpers_tests.cpp
 # 	$(CC) $(CFLAGS) -o $(TEST_SO) \
