@@ -1,8 +1,8 @@
-#include <vector>
-#include <pybind11/pybind11.h>
-#include <pybind11/numpy.h>
+#ifndef ENET_HELPERS_H_
+#define ENET_HELPERS_H_
 
-namespace py = pybind11;
+#include "common.h"
+#include <vector>
 
 
 // copies data from input_x to output_x
@@ -25,3 +25,5 @@ int estimate_squaredloss_naive(py::array_t<double> x_standardized, py::array_t<d
                                double lambda, double alpha, 
                                double tol, size_t max_coord_descent_rounds,
                                int num_threads);
+
+#endif // ENET_HELPERS_H_
