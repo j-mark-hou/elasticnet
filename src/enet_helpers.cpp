@@ -19,7 +19,10 @@ PYBIND11_MODULE(enet_helpers, m){
         })
         .def("get_y", [](const Data &d) {
             return py::array_t<double>(d.y.size(), d.y.data());
-        });
+        })
+        .def_readonly("N", &Data::N)
+        .def_readonly("D", &Data::D)
+        ;
 
     // m.def("copy_input_x_data", &copy_input_x_data, 
     //     "copy x data for downstream use");

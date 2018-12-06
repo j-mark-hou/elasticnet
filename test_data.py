@@ -10,3 +10,4 @@ def test_init():
     print("x, after conversion")
     print(data.get_x())
     print(data.get_y())
+    print("N,D = {}".format((data.N, data.D)))

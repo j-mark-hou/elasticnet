@@ -5,23 +5,6 @@
 
 #define DEBUG 0 // set to 1 to enable debug prints
 
-// TODO: in the case that the input_x x_data is already fortran format, it would be probably faster to
-//       just to... copy it
-void copy_input_x_data(py::array_t<double> input_x, py::array_t<double> output_x, int num_threads){
-    omp_set_num_threads(num_threads);
-    auto input_x_unchecked = input_x.unchecked<2>();
-    auto output_x_unchecked = output_x.mutable_unchecked<1>();
-    size_t N = input_x_unchecked.shape(0), D = input_x_unchecked.shape(1);
-    // go through the array, column by column, filling things up in fortran order
-    // (column-major)
-    #pragma omp parallel for schedule(static) collapse(2)
-    for(size_t c=0; c<D; c++){
-        for(size_t r=0; r<N; r++){
-            output_x_unchecked(c*N+r) = input_x_unchecked(r,c);
-        }
-    }
-}
-
 
 // x_data is a 1-d numpy array, representing a 2-d array in Fortran format 
 //   as in, entries 1,...,N-1 correspond to column 0 of the array, etc.
