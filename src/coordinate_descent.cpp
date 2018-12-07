@@ -4,7 +4,6 @@
 #include "common.h"
 
 #include <cmath>
-#include <string>
 
 
 // after we compute the optimal no-regularization coef, apply regularization
@@ -46,11 +45,15 @@ int estimate_squaredloss_naive(Data& data, std::string& obj_str,
     // initialize the objective, will keep track of state information needed to update
     //  coefs that's specific to the particular objective itself
     Objective *obj_ptr;
-    if(obj_str=="l2"){
+    if(obj_str=="l2") {
         obj_ptr = new L2Objective(data, coefs_unchecked);
-        std::cout<<"YEP, L2"<<std::endl;
+        #if DEBUG
+        std::cout << "objective is l2" << std::endl;
+        #endif
+    } else {
+        throw std::runtime_error("objective function not supported");
     }
-
+        
     // estimate by active-set iteration (see section 2.6), which amounts to these two steps:
     //  1. loop through all D coefs once
     //  2. then repeately loop through just the active coefs until no change

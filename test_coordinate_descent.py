@@ -31,7 +31,7 @@ def test_estimate_squaredloss_naive1():
     print()
     print("l2 objective, lambda={}, alpha={}, tol={}, up to {} rounds, using {} threads"
             .format(reg_lambda, reg_alpha, tol, max_coord_descent_rounds, num_threads))
-    num_rounds = eh.estimate_squaredloss_naive(data, 'l2',
+    num_rounds = eh.estimate_squaredloss_naive(data, "l2",
                                              params_init, params, 
                                              reg_lambda, reg_alpha, 
                                              tol, max_coord_descent_rounds,

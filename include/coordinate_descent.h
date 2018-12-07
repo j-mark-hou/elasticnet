@@ -4,6 +4,7 @@
 #include "common.h"
 #include "data.h"
 #include <vector>
+#include <string>
 
 
 // coordinate descent optimization for elasticnet with squared loss, using the 'naive' update strategy
@@ -14,7 +15,7 @@
 // max_coord_descent_rounds = how many rounds of coordinate descent (1 round = going through all coords once) to do at max
 // lambda = the total regularization amount
 // alpha = the fraction of regularization that goes on the L1 term (so 1-alpha goets on l2)
-int estimate_squaredloss_naive(Data& data,
+int estimate_squaredloss_naive(Data& data, std::string& obj_str,
                                py::array_t<double> params_init, py::array_t<double> params,
                                double lambda, double alpha, 
                                double tol, size_t max_coord_descent_rounds,

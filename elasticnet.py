@@ -45,7 +45,7 @@ def train(data, params=None):
             print("estimating coefficients for lambda = {:.3e}".format(reg_lambda))
             coefs_init = coefs_tmp # set the most recent computed coefs as the initialization
             coefs_tmp = np.empty(D) # holder for new coefs
-            enet_helpers.estimate_squaredloss_naive(data, 'l2',
+            enet_helpers.estimate_squaredloss_naive(data, "l2",
                                                     coefs_init, coefs_tmp, 
                                                     reg_lambda, params['reg_alpha'], 
                                                     params['tol'], params['max_coord_descent_rounds'],

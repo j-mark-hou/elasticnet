@@ -9,6 +9,9 @@
 // abstract base class that all objectives should subclass
 class Objective {
 public:
+    // 
+    Objective(const Data& data, const py::detail::unchecked_reference<double, 1> coefs_unchecked) 
+        : _data(data), _coefs_unchecked(coefs_unchecked){}
     virtual ~Objective(){}
     // the l2 and l1 regularization adjustment is shared across all objectives, whereas
     //  the unregularized optimal coef is unique to a particular objective function,
@@ -18,13 +21,19 @@ public:
     //   that the objective is tracking (e.g. the second-order approx of the
     //   objective function at the updated parameter values)
     virtual void update_internal_state_after_coef_update(size_t j, double new_coef_j) = 0;
+protected:
+    // when we initialize the objective, we'll also attach to it some references
+    //  to the data and coefs, so that we can easily update the state
+    const Data& _data;
+    const py::detail::unchecked_reference<double, 1> _coefs_unchecked;
 };
 
 
 class L2Objective : public Objective {
 public:
-    L2Objective(Data& data, py::detail::unchecked_reference<double, 1> coefs_unchecked) :
-                                    _data(data), _coefs_unchecked(coefs_unchecked){
+    L2Objective(const Data& data, const py::detail::unchecked_reference<double, 1> coefs_unchecked)
+    : Objective(data, coefs_unchecked)
+    {
         _resids = std::vector<double>(_data.N);
         // initialize residuals at y
         for(size_t i=0; i<_data.N; i++){
@@ -39,7 +48,8 @@ public:
             } 
         }
     }
-    double get_unregularized_optimal_coef_j(size_t j){
+    double get_unregularized_optimal_coef_j(size_t j)
+    {
         double unregularized_optimal_coef_j = _coefs_unchecked[j];
         #pragma omp parallel for schedule(static) reduction(+:unregularized_optimal_coef_j)
         for(size_t i=0; i<_data.N; i++){
@@ -60,8 +70,6 @@ private:
     // it's updated each time a param changes by subtracting the old and adding the new
     // TODO: do we need to worry about the value drifting further and further from truth?
     std::vector<double> _resids;
-    Data& _data;
-    py::detail::unchecked_reference<double, 1> _coefs_unchecked;
 };
 
 
