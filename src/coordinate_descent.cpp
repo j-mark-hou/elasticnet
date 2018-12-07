@@ -9,14 +9,14 @@
 
 // after we compute the optimal no-regularization coef, apply regularization
 //  and return the regularized coef
-double apply_l1_l2_reg_to_unregularized_coef(double unregularized_optimal_coef,
+double apply_l1_l2_reg_to_unregularized_coef(double unregularized_optimal_coef_j,
                                              double l1_reg, double l2_reg){
     // if big enough, update the coef, see equation(6) and (5)
-    if(std::abs(unregularized_optimal_coef) > l1_reg){
-        if(unregularized_optimal_coef > 0){
-            return (unregularized_optimal_coef - l1_reg) / (1 + l2_reg);
+    if(std::abs(unregularized_optimal_coef_j) > l1_reg){
+        if(unregularized_optimal_coef_j > 0){
+            return (unregularized_optimal_coef_j - l1_reg) / (1 + l2_reg);
         }else{
-            return (unregularized_optimal_coef + l1_reg) / (1 + l2_reg);
+            return (unregularized_optimal_coef_j + l1_reg) / (1 + l2_reg);
         }
     } else { // if not, then coef gets set to 0
         return 0;
@@ -29,7 +29,7 @@ int estimate_squaredloss_naive(Data& data,
                                double tol, size_t max_coord_descent_rounds,
                                int num_threads){
     omp_set_num_threads(num_threads);
-    size_t N = data.N, D = data.D;
+    size_t D = data.D;
 
     // compute the total l1 and l2 reg
     double l1_reg = alpha*lambda;
@@ -40,7 +40,7 @@ int estimate_squaredloss_naive(Data& data,
     auto coefs_unchecked = coefs.mutable_unchecked<1>();
     #pragma omp parallel for schedule(static)
     for(size_t j=0; j<D; j++){
-        coefs_unchecked(j) = coefs_init_unchecked(j);
+        coefs_unchecked[j] = coefs_init_unchecked[j];
     }
 
     // initialize the objective, will keep track of state information needed to update
@@ -76,7 +76,7 @@ int estimate_squaredloss_naive(Data& data,
     std::vector<bool> coef_is_inactive(D);
     bool curr_round_ignore_inactive = false; // also see 2.6
     bool max_coef_change_exceeds_tol; // boolean stopping criterion = stop iteration if coefs don't change much.
-    double unregularized_optimal_coef; // the value on `expression` inside the S(expression, \lambda\alpha) in equation (5)
+    double unregularized_optimal_coef_j; // the value on `expression` inside the S(expression, \lambda\alpha) in equation (5)
     double new_coef_j; // to hold the new coefs before we update the coefs vector
     size_t curr_round; // we'll also want to keep track of / return the total number of rounds
     for(curr_round=0; curr_round<max_coord_descent_rounds; curr_round++){
@@ -99,34 +99,23 @@ int estimate_squaredloss_naive(Data& data,
             if(coef_is_inactive[j]){
                 continue;
             }
-            unregularized_optimal_coef = obj.get_unregularized_optimal_coef(j);
-
-            // // compute the unregularized_optimal_coef
-            // unregularized_optimal_coef = coefs_unchecked[j];
-            // #pragma omp parallel for schedule(static) reduction(+:unregularized_optimal_coef)
-            // for(size_t i=0; i<N; i++){
-            //     unregularized_optimal_coef += data.x[j*N+i] * (resids[i] / N); // 
-            // }
-
-            // apply regularization adjustment to this unregularized_optimal_coef 
-            //  and then update some iteration state variables
-
-            new_coef_j = apply_l1_l2_reg_to_unregularized_coef(unregularized_optimal_coef, l1_reg, l2_reg);
-            coefs_unchecked[j] = new_coef_j;
-            if(coefs_unchecked[j] == 0){
+            // compute the unregularized_optimal_coef_j
+            unregularized_optimal_coef_j = obj.get_unregularized_optimal_coef_j(j);
+            // apply regularization adjustment to this unregularized_optimal_coef_j
+            new_coef_j = apply_l1_l2_reg_to_unregularized_coef(unregularized_optimal_coef_j, l1_reg, l2_reg);
+            // update the objective's internal state if we updated this coef
+            if(new_coef_j != coefs_unchecked[j]){
+                obj.update_internal_state_after_coef_update(j, new_coef_j);
+            }
+            // deactive the coef if it is now zero
+            if(new_coef_j == 0){
                 coef_is_inactive[j] = true;
             }
+            // keep track of the max that any coef this round has changed
             max_coef_change_exceeds_tol = (max_coef_change_exceeds_tol)
                                             || (std::abs(new_coef_j - coefs_unchecked[j]) > tol);
-
-            // // update the residuals if we updated this param
-            // if(new_coef_j != coefs_unchecked[j]){
-            //     #pragma omp parallel for schedule(static)
-            //     for(size_t i=0; i<N; i++){
-            //         resids[i] -= data.x[j*N+i] * tmp_new_minus_old_param; // 
-            //     }
-            // }
-            obj.update_internal_state_after_coef_update(j, new_coef_j);
+            // finally, update the coef
+            coefs_unchecked[j] = new_coef_j;
         }
         
         #if DEBUG // print coefs after each round

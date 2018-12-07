@@ -27,13 +27,13 @@ public:
     // the l2 and l1 regularization adjustment is shared across all objectives, whereas
     //  the unregularized optimal coef is unique to a particular objective function,
     //  which is why this is here
-    double get_unregularized_optimal_coef(size_t j){
-        double unregularized_optimal_coef = _coefs_unchecked[j];
-        #pragma omp parallel for schedule(static) reduction(+:unregularized_optimal_coef)
+    double get_unregularized_optimal_coef_j(size_t j){
+        double unregularized_optimal_coef_j = _coefs_unchecked[j];
+        #pragma omp parallel for schedule(static) reduction(+:unregularized_optimal_coef_j)
         for(size_t i=0; i<_data.N; i++){
-            unregularized_optimal_coef += _data.x[j*_data.N+i] * (_resids[i] / _data.N); // 
+            unregularized_optimal_coef_j += _data.x[j*_data.N+i] * (_resids[i] / _data.N); // 
         }
-        return unregularized_optimal_coef;
+        return unregularized_optimal_coef_j;
     }
     // after we update the coefs, we may want to update the internal state
     //   that the objective is tracking.
