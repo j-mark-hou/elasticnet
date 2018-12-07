@@ -12,10 +12,10 @@ PYBIND11_MODULE(enet_helpers, m){
     py::class_<Data>(m, "Data")
         .def(py::init<const py::array_t<double> &, const py::array_t<double> &, int>(),
             py::arg("x"), py::arg("y"), py::arg("num_threads")=1)
-        // bind some lambda functions for returning the data.  Note that this will copy the internal
-        //   data and return it, which may be quite costly
         .def_readonly("N", &Data::N)
         .def_readonly("D", &Data::D)
+        // bind some lambda functions for returning the data.  Note that this will copy the internal
+        //   data and return it, which may be quite costly
         .def("get_x", [](const Data &d) {
             return py::array_t<double>(d.x.size(), d.x.data());
         })
