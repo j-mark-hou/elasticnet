@@ -4,8 +4,7 @@ Example notebook: https://github.com/j-mark-hou/elasticnet/blob/master/example.i
 
 Some notes:
 
-- computation is in C++
-	- support multithreading via OpenMP
+- computation is in C++, with multithreading via OpenMP
 - interface is in Python (see `elasticnet.py`), which accesses the built c++ shared library via pybind
 - currently only supports L2 objective (more on the way)
 
