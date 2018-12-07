@@ -6,6 +6,26 @@
 #include <memory>
 
 
+// function to return smart ptr to an Objective function based on string input
+std::unique_ptr<Objective> create_and_initialize_objective(const std::string& obj_str, 
+                                                           const Data& data, 
+                                                           const py::detail::unchecked_reference<double, 1> coefs_unchecked)
+{
+    // initialize the objective, will keep track of state information needed to update
+    //  coefs that's specific to the particular objective itself
+    std::unique_ptr<Objective> obj_ptr;
+    if(obj_str=="l2") {
+        obj_ptr = std::unique_ptr<Objective>(new L2Objective(data, coefs_unchecked));
+        #if DEBUG
+        std::cout << "objective is l2" << std::endl;
+        #endif
+    } else {
+        throw std::runtime_error("objective function not supported");
+    }
+    return obj_ptr;
+
+}
+
 // after we compute the optimal no-regularization coef, apply regularization
 //  and return the regularized coef
 double apply_l1_l2_reg_to_unregularized_coef(double unregularized_optimal_coef_j,
@@ -44,17 +64,8 @@ int cyclic_coordinate_descent(Data& data, std::string& obj_str,
         coefs_unchecked[j] = coefs_init_unchecked[j];
     }
 
-    // initialize the objective, will keep track of state information needed to update
-    //  coefs that's specific to the particular objective itself
-    std::unique_ptr<Objective> obj_ptr;
-    if(obj_str=="l2") {
-        obj_ptr = std::unique_ptr<Objective>(new L2Objective(data, coefs_unchecked));
-        #if DEBUG
-        std::cout << "objective is l2" << std::endl;
-        #endif
-    } else {
-        throw std::runtime_error("objective function not supported");
-    }
+    // initialize the objective
+    std::unique_ptr<Objective> obj_ptr = create_and_initialize_objective(obj_str, data, coefs_unchecked);
         
     // estimate by active-set iteration (see section 2.6), which amounts to these two steps:
     //  1. loop through all D coefs once
