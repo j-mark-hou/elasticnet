@@ -2,8 +2,8 @@
 #include "data.h"
 #include "objective.h"
 #include "common.h"
-
 #include <cmath>
+#include <memory>
 
 
 // after we compute the optimal no-regularization coef, apply regularization
@@ -46,9 +46,9 @@ int cyclic_coordinate_descent(Data& data, std::string& obj_str,
 
     // initialize the objective, will keep track of state information needed to update
     //  coefs that's specific to the particular objective itself
-    Objective *obj_ptr;
+    std::unique_ptr<Objective> obj_ptr;
     if(obj_str=="l2") {
-        obj_ptr = new L2Objective(data, coefs_unchecked);
+        obj_ptr = std::unique_ptr<Objective>(new L2Objective(data, coefs_unchecked));
         #if DEBUG
         std::cout << "objective is l2" << std::endl;
         #endif
@@ -130,7 +130,7 @@ int cyclic_coordinate_descent(Data& data, std::string& obj_str,
             curr_round_ignore_inactive = true;
         }
     }
-    delete obj_ptr;
+    // delete obj_ptr;
     // return the total number of rounds
     return curr_round;
 }
