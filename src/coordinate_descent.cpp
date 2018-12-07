@@ -23,7 +23,7 @@ double apply_l1_l2_reg_to_unregularized_coef(double unregularized_optimal_coef_j
     }
 }
 
-int estimate_squaredloss_naive(Data& data,
+int estimate_squaredloss_naive(Data& data, std::string& obj_str,
                                py::array_t<double> coefs_init, py::array_t<double> coefs,
                                double lambda, double alpha, 
                                double tol, size_t max_coord_descent_rounds,
@@ -45,26 +45,11 @@ int estimate_squaredloss_naive(Data& data,
 
     // initialize the objective, will keep track of state information needed to update
     //  coefs that's specific to the particular objective itself
-    L2Objective obj(data, coefs_unchecked);
-
-    // compute the initial residuals (r in equation (7)), which is (y - yhat)
-    // note that this number is never re-computed from first principles, rather
-    // it's updated each time a coef changes by subtracting the old and adding the new
-    // TODO: do we need to worry about the value drifting further and further from truth?
-    // std::vector<double> resids(N);
-
-    // // initialize residuals at y
-    // for(size_t i=0; i<N; i++){
-    //     resids[i] = data.y[i];
-    // }
-    // // and then subtract the x_ij * coefs[j] repeatedly.
-    // for(size_t j=0; j<D; j++){
-    //     #pragma omp parallel for schedule(static) // can't parallelize above as all i's get updated for each j
-    //     for(size_t i=0; i<N; i++){
-    //         resids[i] -= data.x[j*N+i] * coefs_unchecked[j]; //
-    //     } 
-    // }
-
+    Objective *obj_ptr;
+    if(obj_str=="l2"){
+        obj_ptr = new L2Objective(data, coefs_unchecked);
+        std::cout<<"YEP, L2"<<std::endl;
+    }
 
     // estimate by active-set iteration (see section 2.6), which amounts to these two steps:
     //  1. loop through all D coefs once
@@ -100,12 +85,12 @@ int estimate_squaredloss_naive(Data& data,
                 continue;
             }
             // compute the unregularized_optimal_coef_j
-            unregularized_optimal_coef_j = obj.get_unregularized_optimal_coef_j(j);
+            unregularized_optimal_coef_j = obj_ptr->get_unregularized_optimal_coef_j(j);
             // apply regularization adjustment to this unregularized_optimal_coef_j
             new_coef_j = apply_l1_l2_reg_to_unregularized_coef(unregularized_optimal_coef_j, l1_reg, l2_reg);
             // update the objective's internal state if we updated this coef
             if(new_coef_j != coefs_unchecked[j]){
-                obj.update_internal_state_after_coef_update(j, new_coef_j);
+                obj_ptr->update_internal_state_after_coef_update(j, new_coef_j);
             }
             // deactive the coef if it is now zero
             if(new_coef_j == 0){
@@ -140,7 +125,7 @@ int estimate_squaredloss_naive(Data& data,
             curr_round_ignore_inactive = true;
         }
     }
-
+    delete obj_ptr;
     // return the total number of rounds
     return curr_round;
 }

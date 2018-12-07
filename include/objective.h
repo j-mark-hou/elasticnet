@@ -4,9 +4,24 @@
 #include "common.h"
 #include "data.h"
 #include <pybind11/numpy.h>
+#include <string>
+
+// abstract base class that all objectives should subclass
+class Objective {
+public:
+    virtual ~Objective(){}
+    // the l2 and l1 regularization adjustment is shared across all objectives, whereas
+    //  the unregularized optimal coef is unique to a particular objective function,
+    //  which is why this is here
+    virtual double get_unregularized_optimal_coef_j(size_t j) = 0;
+    // after we update the coefs, we may want to update the internal state
+    //   that the objective is tracking (e.g. the second-order approx of the
+    //   objective function at the updated parameter values)
+    virtual void update_internal_state_after_coef_update(size_t j, double new_coef_j) = 0;
+};
 
 
-class L2Objective {
+class L2Objective : public Objective {
 public:
     L2Objective(Data& data, py::detail::unchecked_reference<double, 1> coefs_unchecked) :
                                     _data(data), _coefs_unchecked(coefs_unchecked){
@@ -23,10 +38,7 @@ public:
                 _resids[i] -= _data.x[j*_data.N+i] * _coefs_unchecked[j]; //
             } 
         }
-    };
-    // the l2 and l1 regularization adjustment is shared across all objectives, whereas
-    //  the unregularized optimal coef is unique to a particular objective function,
-    //  which is why this is here
+    }
     double get_unregularized_optimal_coef_j(size_t j){
         double unregularized_optimal_coef_j = _coefs_unchecked[j];
         #pragma omp parallel for schedule(static) reduction(+:unregularized_optimal_coef_j)
@@ -35,8 +47,6 @@ public:
         }
         return unregularized_optimal_coef_j;
     }
-    // after we update the coefs, we may want to update the internal state
-    //   that the objective is tracking.
     void update_internal_state_after_coef_update(size_t j, double new_coef_j){
         double new_minus_old_coef_j = new_coef_j - _coefs_unchecked[j];
         #pragma omp parallel for schedule(static)

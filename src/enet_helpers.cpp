@@ -1,9 +1,6 @@
 #include "data.h"
 #include "coordinate_descent.h"
-
-#include <iostream>
-#include <omp.h>
-#include <cmath>
+#include "common.h"
 
 
 PYBIND11_MODULE(enet_helpers, m){
