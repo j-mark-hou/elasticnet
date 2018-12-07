@@ -27,7 +27,8 @@ def train(data, params=None):
 
     # the lambda path = the sequence of global regulaization parameters
     if params['lambda_path'] is not None:
-        params['lambda_path'] = sorted(set(params['lambda_path']))
+        # reversed so that we'll start with the biggest regularization parameter
+        params['lambda_path'] = reversed(sorted(set(params['lambda_path'])))
     else:
         pass
         # TODO: implement automatic lambda path generation
