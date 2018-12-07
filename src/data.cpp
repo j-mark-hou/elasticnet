@@ -1,7 +1,8 @@
 #include <data.h>
 #include <common.h>
 
-Data::Data(py::array_t<double> x, py::array_t<double> y, int num_threads){        
+Data::Data(py::array_t<double> x, py::array_t<double> y, int num_threads)
+{
     omp_set_num_threads(num_threads);
     // copy the x
     auto x_unchecked = x.unchecked<2>();
@@ -30,7 +31,8 @@ Data::Data(py::array_t<double> x, py::array_t<double> y, int num_threads){
     }
 };
 
-void Data::compute_mean_std_and_standardize_x_data(){
+void Data::compute_mean_std_and_standardize_x_data()
+{
     // initialize this->means and this->stds
     means = std::vector<double>(D);
     stds = std::vector<double>(D);

@@ -3,7 +3,8 @@
 #include "common.h"
 
 
-PYBIND11_MODULE(enet_helpers, m){
+PYBIND11_MODULE(enet_helpers, m)
+{
     m.doc() = "elastic net";
 
     py::class_<Data>(m, "Data")

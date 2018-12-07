@@ -7,7 +7,8 @@
 #include <string>
 
 // abstract base class that all objectives should subclass
-class Objective {
+class Objective
+{
 public:
     // 
     Objective(const Data& data, const py::detail::unchecked_reference<double, 1> coefs_unchecked) 
@@ -29,7 +30,8 @@ protected:
 };
 
 
-class L2Objective : public Objective {
+class L2Objective : public Objective
+{
 public:
     L2Objective(const Data& data, const py::detail::unchecked_reference<double, 1> coefs_unchecked)
     : Objective(data, coefs_unchecked)

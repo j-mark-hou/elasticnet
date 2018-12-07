@@ -6,7 +6,8 @@
 #include <cmath>
 
 // base class for holding data
-class Data {
+class Data 
+{
 public:
     size_t N; // number of rows (= data points)
     size_t D; // number of columns (= features)
