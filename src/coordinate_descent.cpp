@@ -130,7 +130,6 @@ int cyclic_coordinate_descent(Data& data, std::string& obj_str,
             curr_round_ignore_inactive = true;
         }
     }
-    // delete obj_ptr;
     // return the total number of rounds
     return curr_round;
 }
