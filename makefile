@@ -14,7 +14,8 @@ make_and_test: $(MAIN_SO) # $(TEST_SO)
 	pytest -s test_data.py test_coordinate_descent.py
 
 $(MAIN_SO): $(SRC_PATH)enet_helpers.cpp $(INC_PATH)data.h $(SRC_PATH)data.cpp \
-			$(INC_PATH)coordinate_descent.h $(SRC_PATH)coordinate_descent.cpp
+			$(INC_PATH)coordinate_descent.h $(SRC_PATH)coordinate_descent.cpp \
+			$(INC_PATH)objective.h
 	$(CC) $(CFLAGS) -o $@ $^
 
 # $(TEST_SO): $(SRC_PATH)enet_helpers.cpp $(INC_PATH)enet_helpers.h $(TEST_PATH)enet_helpers_tests.cpp
