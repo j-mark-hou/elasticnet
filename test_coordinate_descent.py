@@ -1,7 +1,7 @@
 import enet_helpers as eh
 import numpy as np
 
-def test_estimate_squaredloss_naive1():
+def test_cyclic_coordinate_descent():
     # x-data: 
     N,D = 100, 6
     x = np.random.uniform(size=(N,D))
@@ -31,11 +31,11 @@ def test_estimate_squaredloss_naive1():
     print()
     print("l2 objective, lambda={}, alpha={}, tol={}, up to {} rounds, using {} threads"
             .format(reg_lambda, reg_alpha, tol, max_coord_descent_rounds, num_threads))
-    num_rounds = eh.estimate_squaredloss_naive(data, "l2",
-                                             params_init, params, 
-                                             reg_lambda, reg_alpha, 
-                                             tol, max_coord_descent_rounds,
-                                             num_threads)
+    num_rounds = eh.cyclic_coordinate_descent(data, "l2",
+                                              params_init, params, 
+                                              reg_lambda, reg_alpha, 
+                                              tol, max_coord_descent_rounds,
+                                              num_threads)
     print("number of rounds (=passes through the coordinates): {}".format(num_rounds))
     print("computed means :  [{}]".format(", ".join(["{:.2f}".format(x) for x in data.get_means()])))
     print("computed stds :   [{}]".format(", ".join(["{:.2f}".format(x) for x in data.get_stds()])))

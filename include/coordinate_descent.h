@@ -15,10 +15,10 @@
 // max_coord_descent_rounds = how many rounds of coordinate descent (1 round = going through all coords once) to do at max
 // lambda = the total regularization amount
 // alpha = the fraction of regularization that goes on the L1 term (so 1-alpha goets on l2)
-int estimate_squaredloss_naive(Data& data, std::string& obj_str,
-                               py::array_t<double> params_init, py::array_t<double> params,
-                               double lambda, double alpha, 
-                               double tol, size_t max_coord_descent_rounds,
-                               int num_threads);
+int cyclic_coordinate_descent(Data& data, std::string& obj_str,
+                              py::array_t<double> params_init, py::array_t<double> params,
+                              double lambda, double alpha, 
+                              double tol, size_t max_coord_descent_rounds,
+                              int num_threads);
 
 #endif // COORDINATE_DESCENT_H_

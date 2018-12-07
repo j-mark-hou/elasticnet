@@ -22,11 +22,11 @@ double apply_l1_l2_reg_to_unregularized_coef(double unregularized_optimal_coef_j
     }
 }
 
-int estimate_squaredloss_naive(Data& data, std::string& obj_str,
-                               py::array_t<double> coefs_init, py::array_t<double> coefs,
-                               double lambda, double alpha, 
-                               double tol, size_t max_coord_descent_rounds,
-                               int num_threads){
+int cyclic_coordinate_descent(Data& data, std::string& obj_str,
+                              py::array_t<double> coefs_init, py::array_t<double> coefs,
+                              double lambda, double alpha, 
+                              double tol, size_t max_coord_descent_rounds,
+                              int num_threads){
     omp_set_num_threads(num_threads);
     size_t D = data.D;
 

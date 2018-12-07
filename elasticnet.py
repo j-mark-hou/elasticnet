@@ -45,11 +45,11 @@ def train(data, params=None):
             print("estimating coefficients for lambda = {:.3e}".format(reg_lambda))
             coefs_init = coefs_tmp # set the most recent computed coefs as the initialization
             coefs_tmp = np.empty(D) # holder for new coefs
-            enet_helpers.estimate_squaredloss_naive(data, "l2",
-                                                    coefs_init, coefs_tmp, 
-                                                    reg_lambda, params['reg_alpha'], 
-                                                    params['tol'], params['max_coord_descent_rounds'],
-                                                    params['num_threads'])
+            enet_helpers.cyclic_coordinate_descent(data, "l2",
+                                                   coefs_init, coefs_tmp, 
+                                                   reg_lambda, params['reg_alpha'], 
+                                                   params['tol'], params['max_coord_descent_rounds'],
+                                                   params['num_threads'])
             intercept_coef_list.append({'reg_lambda':reg_lambda, 'intercept':intercept, 'coefs':coefs_tmp})
 
     # dump this into a class and return

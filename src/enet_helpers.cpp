@@ -26,6 +26,6 @@ PYBIND11_MODULE(enet_helpers, m){
             return py::array_t<double>(d.stds.size(), d.stds.data());
         });
 
-    m.def("estimate_squaredloss_naive", &estimate_squaredloss_naive, 
-        "coordinate descent optimization for elasticnet with squared loss, using the 'naive' update strategy");
+    m.def("cyclic_coordinate_descent", &cyclic_coordinate_descent, 
+          "function for doingcyclic coordinate descent optimization for elasticnet");
 }
