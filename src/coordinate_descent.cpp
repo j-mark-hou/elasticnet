@@ -15,7 +15,8 @@ std::unique_ptr<Objective> create_and_initialize_objective(const std::string& ob
     //  coefs that's specific to the particular objective itself
     std::unique_ptr<Objective> obj_ptr;
     if(obj_str=="l2") {
-        obj_ptr = std::unique_ptr<Objective>(new L2Objective(data, coefs_unchecked));
+        // obj_ptr = std::unique_ptr<Objective>(new L2Objective(data, coefs_unchecked));
+        obj_ptr = std::make_unique<L2Objective>(data, coefs_unchecked);
         #if DEBUG
         std::cout << "objective is l2" << std::endl;
         #endif

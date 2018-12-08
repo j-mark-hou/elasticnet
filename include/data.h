@@ -3,7 +3,6 @@
 
 #include "common.h"
 #include <vector>
-#include <cmath>
 
 // base class for holding data
 class Data 
