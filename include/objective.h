@@ -10,7 +10,9 @@
 class Objective
 {
 public:
-    // 
+    // When we initialize the objective, we'll also attach to it some references
+    //  to the data and coefs, so that we can easily update the state wthout having
+    //  to re-pass-in these each timeto the methods below
     Objective(const Data& data, const py::detail::unchecked_reference<double, 1> coefs_unchecked) 
         : _data(data), _coefs_unchecked(coefs_unchecked){}
     virtual ~Objective(){}
@@ -23,8 +25,6 @@ public:
     //   objective function at the updated parameter values)
     virtual void update_internal_state_after_coef_update(size_t j, double new_coef_j) = 0;
 protected:
-    // when we initialize the objective, we'll also attach to it some references
-    //  to the data and coefs, so that we can easily update the state
     const Data& _data;
     const py::detail::unchecked_reference<double, 1> _coefs_unchecked;
 };
@@ -38,34 +38,43 @@ public:
     {
         _resids = std::vector<double>(_data.N);
         // initialize residuals at y
-        for(size_t i=0; i<_data.N; i++){
+        for(size_t i=0; i<_data.N; i++)
+        {
             _resids[i] = _data.y[i];
         }
         // and then subtract the x_ij * params[j] repeatedly.
         // do this column by column, but parallelize within columns
-        for(size_t j=0; j<_data.D; j++){
+        for(size_t j=0; j<_data.D; j++)
+        {
             #pragma omp parallel for schedule(static)
-            for(size_t i=0; i<_data.N; i++){
+            for(size_t i=0; i<_data.N; i++)
+            {
                 _resids[i] -= _data.x[j*_data.N+i] * _coefs_unchecked[j]; //
             } 
         }
     }
+
     double get_unregularized_optimal_coef_j(size_t j)
     {
         double unregularized_optimal_coef_j = _coefs_unchecked[j];
         #pragma omp parallel for schedule(static) reduction(+:unregularized_optimal_coef_j)
-        for(size_t i=0; i<_data.N; i++){
-            unregularized_optimal_coef_j += _data.x[j*_data.N+i] * (_resids[i] / _data.N); // 
+        for(size_t i=0; i<_data.N; i++)
+        {
+            unregularized_optimal_coef_j += _data.x[j*_data.N+i] * (_resids[i] / _data.N);
         }
         return unregularized_optimal_coef_j;
     }
-    void update_internal_state_after_coef_update(size_t j, double new_coef_j){
+
+    void update_internal_state_after_coef_update(size_t j, double new_coef_j)
+    {
         double new_minus_old_coef_j = new_coef_j - _coefs_unchecked[j];
         #pragma omp parallel for schedule(static)
-        for(size_t i=0; i<_data.N; i++){
+        for(size_t i=0; i<_data.N; i++)
+        {
             _resids[i] -= _data.x[j*_data.N+i] * new_minus_old_coef_j; // 
         }
     }
+    
 private:
     // compute the initial residuals (r in equation (7)), which is (y - yhat)
     // note that this number is never re-computed from first principles, rather

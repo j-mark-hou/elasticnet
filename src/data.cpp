@@ -13,8 +13,10 @@ Data::Data(py::array_t<double> x, py::array_t<double> y, int num_threads)
     // go through the array, column by column, filling things up in fortran order
     // (column-major)
     #pragma omp parallel for schedule(static) collapse(2)
-    for(size_t j=0; j<D; j++){
-        for(size_t i=0; i<N; i++){
+    for(size_t j=0; j<D; j++)
+    {
+        for(size_t i=0; i<N; i++)
+        {
             this->x[j*N+i] = x_unchecked(i,j);
         }
     }
@@ -26,7 +28,8 @@ Data::Data(py::array_t<double> x, py::array_t<double> y, int num_threads)
     // go through the array, column by column, filling things up in fortran order
     // (column-major)
     #pragma omp parallel for schedule(static)
-    for(size_t i=0; i<N; i++){
+    for(size_t i=0; i<N; i++)
+    {
         this->y[i] = y_unchecked(i);
     }
 };
@@ -39,10 +42,12 @@ void Data::compute_mean_std_and_standardize_x_data()
 
     // compute the means and stds for each dimension
     #pragma omp parallel for schedule(static)
-    for(size_t j=0; j<D; j++){
+    for(size_t j=0; j<D; j++)
+    {
         double mean=0, meansq=0;
         int n = 1;
-        for(size_t i=j*N; i<(j+1)*N; i++){
+        for(size_t i=j*N; i<(j+1)*N; i++)
+        {
             mean += (x[i]-mean)/n;
             meansq += (x[i]*x[i]-meansq)/n;
             n++;
@@ -53,8 +58,10 @@ void Data::compute_mean_std_and_standardize_x_data()
     }
     // now normalize each column by subtracting the mean and dividing by the std
     #pragma omp parallel for schedule(static)
-    for(size_t j=0; j<D; j++){
-        for(size_t i=j*N; i<(j+1)*(N); i++){
+    for(size_t j=0; j<D; j++)
+    {
+        for(size_t i=j*N; i<(j+1)*(N); i++)
+        {
             x[i] = (x[i]-means[j])/stds[j];
         }
     }
