@@ -30,6 +30,7 @@ protected:
 };
 
 
+// squared loss objective.  as in, linear regression.
 class L2Objective : public Objective
 {
 public:
@@ -81,6 +82,31 @@ private:
     // it's updated each time a param changes by subtracting the old and adding the new
     // TODO: do we need to worry about the value drifting further and further from truth?
     std::vector<double> _resids;
+};
+
+
+// binary logistic regression objective
+class BinaryLogitObjective : public Objective
+{
+public:
+    BinaryLogitObjective(const Data& data, const py::detail::unchecked_reference<double, 1> coefs_unchecked)
+    : Objective(data, coefs_unchecked)
+    {
+
+    }
+
+    double get_unregularized_optimal_coef_j(size_t j)
+    {
+
+    }
+
+    void update_internal_state_after_coef_update(size_t j, double new_coef_j)
+    {
+
+    }
+    
+private:
+
 };
 
 
