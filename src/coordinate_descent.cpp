@@ -77,9 +77,9 @@ int cyclic_coordinate_descent(Data& data, std::string& obj_str,
     // initialize the objective
     std::unique_ptr<Objective> obj_ptr = create_and_initialize_objective(obj_str, data, coefs_unchecked);
 
-    // compute the intercept
+    // store the intercept computed during objective initialization
     auto intercept_unchecked = intercept.mutable_unchecked<1>();
-    intercept_unchecked[0] = obj_ptr->get_unregularized_optimal_intercept();
+    intercept_unchecked[0] = obj_ptr->_intercept;
 
     // estimate by active-set iteration (see section 2.6), which amounts to these two steps:
     //  1. loop through all D coefs once

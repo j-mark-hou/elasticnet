@@ -10,9 +10,12 @@
 class Objective
 {
 public:
+    // something to hold the computed intercept
+    double _intercept;
     // When we initialize the objective, we'll also attach to it some references
     //  to the data and coefs, so that we can easily update the state wthout having
-    //  to re-pass-in these each timeto the methods below
+    //  to re-pass-in these each timeto the methods below.
+    // This method should also compute the intercept and store it in _intercept.
     Objective(const Data& data, const py::detail::unchecked_reference<double, 1> coefs_unchecked) 
         : _data(data), _coefs_unchecked(coefs_unchecked){}
     virtual ~Objective(){}
@@ -27,7 +30,6 @@ public:
     //   objective function at the updated parameter values)
     virtual void update_internal_state_after_coef_update(size_t j, double new_coef_j) = 0;
 protected:
-    double _intercept;
     const Data& _data;
     const py::detail::unchecked_reference<double, 1> _coefs_unchecked;
 };
@@ -101,31 +103,3 @@ private:
     // TODO: do we need to worry about the value drifting further and further from truth?
     std::vector<double> _resids;
 };
-
-
-// binary logistic regression objective
-class BinaryLogitObjective : public Objective
-{
-public:
-    BinaryLogitObjective(const Data& data, const py::detail::unchecked_reference<double, 1> coefs_unchecked)
-    : Objective(data, coefs_unchecked)
-    {
-
-    }
-
-    double get_unregularized_optimal_coef_j(size_t j)
-    {
-
-    }
-
-    void update_internal_state_after_coef_update(size_t j, double new_coef_j)
-    {
-
-    }
-    
-private:
-
-};
-
-
-#endif //OBJECTIVE_H_
