@@ -28,5 +28,5 @@ PYBIND11_MODULE(enet_helpers, m)
         });
 
     m.def("cyclic_coordinate_descent", &cyclic_coordinate_descent, 
-          "function for doingcyclic coordinate descent optimization for elasticnet");
+          "function for doing cyclic coordinate descent optimization for elasticnet");
 }
