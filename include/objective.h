@@ -103,3 +103,5 @@ private:
     // TODO: do we need to worry about the value drifting further and further from truth?
     std::vector<double> _resids;
 };
+
+#endif //OBJECTIVE_H_
