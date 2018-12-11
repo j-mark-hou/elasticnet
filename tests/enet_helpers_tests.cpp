@@ -58,6 +58,4 @@
 //     m.def("test_estimate_squaredloss_naive_time", &test_estimate_squaredloss_naive_time, 
 //         "function to test the speed of elastic net");
 
-
-
 // }

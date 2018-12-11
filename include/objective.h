@@ -27,6 +27,7 @@ public:
     //   objective function at the updated parameter values)
     virtual void update_internal_state_after_coef_update(size_t j, double new_coef_j) = 0;
 protected:
+    double _intercept;
     const Data& _data;
     const py::detail::unchecked_reference<double, 1> _coefs_unchecked;
 };
@@ -38,11 +39,13 @@ public:
     L2Objective(const Data& data, const py::detail::unchecked_reference<double, 1> coefs_unchecked)
     : Objective(data, coefs_unchecked)
     {
+        // compute intercept
+        _intercept = get_unregularized_optimal_intercept();
+        // initialize residuals at y - intercept
         _resids = std::vector<double>(_data.N);
-        // initialize residuals at y
         for(size_t i=0; i<_data.N; i++)
         {
-            _resids[i] = _data.y[i];
+            _resids[i] = _data.y[i] - _intercept;
         }
         // and then subtract the x_ij * params[j] repeatedly.
         // do this column by column, but parallelize within columns
