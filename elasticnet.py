@@ -35,8 +35,6 @@ def train(data, params=None):
 
     # copy and prepare data for estimation:
     N, D = data.N, data.D
-    # intercept is just mean y due to standardization of x
-    intercept = data.get_y().mean()
 
     # estimate parameters of the whole regularization path
     intercept_coef_list = []
@@ -44,14 +42,16 @@ def train(data, params=None):
     if params['objective']=='l2':
         for reg_lambda in params['lambda_path']:
             print("estimating coefficients for lambda = {:.3e}".format(reg_lambda))
-            coefs_init = coefs_tmp # set the most recent computed coefs as the initialization
+            intercept_tmp = np.empty(shape=1) # holder for the intercept
             coefs_tmp = np.empty(D) # holder for new coefs
+            coefs_init = coefs_tmp # set the most recent computed coefs as the initialization
             enet_helpers.cyclic_coordinate_descent(data, "l2",
-                                                   coefs_init, coefs_tmp, 
+                                                   intercept_tmp, coefs_tmp,
+                                                   coefs_init, 
                                                    reg_lambda, params['reg_alpha'], 
                                                    params['tol'], params['max_coord_descent_rounds'],
                                                    params['num_threads'])
-            intercept_coef_list.append({'reg_lambda':reg_lambda, 'intercept':intercept, 'coefs':coefs_tmp})
+            intercept_coef_list.append({'reg_lambda':reg_lambda, 'intercept':intercept_tmp[0], 'coefs':coefs_tmp})
 
     # dump this into a class and return
     out_models = ElasticNetPathModels(params, intercept_coef_list)

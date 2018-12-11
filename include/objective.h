@@ -16,6 +16,8 @@ public:
     Objective(const Data& data, const py::detail::unchecked_reference<double, 1> coefs_unchecked) 
         : _data(data), _coefs_unchecked(coefs_unchecked){}
     virtual ~Objective(){}
+    // the intercept is not regularized, implement a function to return it
+    virtual double get_unregularized_optimal_intercept() = 0;
     // the l2 and l1 regularization adjustment is shared across all objectives, whereas
     //  the unregularized optimal coef is unique to a particular objective function,
     //  which is why this is here
@@ -53,6 +55,19 @@ public:
                 _resids[i] -= _data.x[j*_data.N+i] * _coefs_unchecked[j]; //
             } 
         }
+    }
+
+    double get_unregularized_optimal_intercept()
+    {
+        // in the linear regression case, the coef is just the mean of the y
+        double intercept=0;
+        int n = 1;
+        for(size_t i=0; i<_data.N; i++)
+        {
+            intercept += (_data.y[i]-intercept)/n;
+            n++;
+        }
+        return intercept;
     }
 
     double get_unregularized_optimal_coef_j(size_t j)

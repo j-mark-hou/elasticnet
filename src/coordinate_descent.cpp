@@ -52,7 +52,8 @@ double apply_l1_l2_reg_to_unregularized_coef(double unregularized_optimal_coef_j
 }
 
 int cyclic_coordinate_descent(Data& data, std::string& obj_str,
-                              py::array_t<double> coefs_init, py::array_t<double> coefs,
+                              py::array_t<double> intercept, py::array_t<double> coefs,
+                              py::array_t<double> coefs_init, 
                               double lambda, double alpha, 
                               double tol, size_t max_coord_descent_rounds,
                               int num_threads)
@@ -75,7 +76,11 @@ int cyclic_coordinate_descent(Data& data, std::string& obj_str,
 
     // initialize the objective
     std::unique_ptr<Objective> obj_ptr = create_and_initialize_objective(obj_str, data, coefs_unchecked);
-        
+
+    // compute the intercept
+    auto intercept_unchecked = intercept.mutable_unchecked<1>();
+    intercept_unchecked[0] = obj_ptr->get_unregularized_optimal_intercept();
+
     // estimate by active-set iteration (see section 2.6), which amounts to these two steps:
     //  1. loop through all D coefs once
     //  2. then repeately loop through just the active coefs until no change
